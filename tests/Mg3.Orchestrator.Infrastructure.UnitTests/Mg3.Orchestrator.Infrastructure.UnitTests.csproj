@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Mg3.Orchestrator.Infrastructure\Mg3.Orchestrator.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

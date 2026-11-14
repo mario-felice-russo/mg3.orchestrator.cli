@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Orchestrazione dei comandi e del batch; punto d'ingresso per l'uso come libreria (AddMg3Orchestrator).</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Mg3.Orchestrator.Abstractions\Mg3.Orchestrator.Abstractions.csproj" />
+    <ProjectReference Include="..\Mg3.Orchestrator.Catalog\Mg3.Orchestrator.Catalog.csproj" />
+    <ProjectReference Include="..\Mg3.Orchestrator.Query\Mg3.Orchestrator.Query.csproj" />
+    <ProjectReference Include="..\Mg3.Orchestrator.Infrastructure\Mg3.Orchestrator.Infrastructure.csproj" />
+    <ProjectReference Include="..\Mg3.Orchestrator.Output\Mg3.Orchestrator.Output.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Mg3.Orchestrator.Core.UnitTests" />
+  </ItemGroup>
+</Project>

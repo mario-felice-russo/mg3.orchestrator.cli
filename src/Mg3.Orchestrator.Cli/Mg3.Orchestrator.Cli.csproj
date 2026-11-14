@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>mg3orch</AssemblyName>
+    <RootNamespace>Mg3.Orchestrator.Cli</RootNamespace>
+    <Description>CLI di sola lettura per UiPath Orchestrator, con DSL di query e output testo/JSON.</Description>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>mg3orch</ToolCommandName>
+    <PackageId>Mg3.Orchestrator.Cli</PackageId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Mg3.Orchestrator.Core\Mg3.Orchestrator.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Mg3.Orchestrator.IntegrationTests" />
+  </ItemGroup>
+</Project>

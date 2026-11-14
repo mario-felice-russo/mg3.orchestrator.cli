@@ -235,8 +235,7 @@ functions  = now() | today() | date(s) | lower(x) | upper(x) | len(x)
 - **Paginazione.** Tramite `$top`/`$skip`, finché la pagina restituita è più corta della richiesta oppure si raggiunge `@odata.count`, `maxItems` o `maxPages`.
 - **Cancellazione.** Un `CancellationToken` collegato a `Ctrl+C`/SIGTERM e a `globalTimeoutSeconds` attraversa tutti i livelli.
 - **Logging.** `ILogger` su `stderr`. Livello impostato con `--verbosity quiet|normal|detailed|diagnostic`. A livello `diagnostic` si registra la URL con la query string, ma mai gli header di autorizzazione.
-- **AOT.** `PublishAot=true` e `IsTrimmable=true` devono compilare senza warning IL/AOT.
-- **Distribuzione.** Come eseguibile nativo (win-x64, linux-x64, osx-arm64) e come `dotnet tool` (`ToolCommandName=mg3orch`).
+- **Distribuzione.** Come eseguibile self-contained single-file (win-x64, linux-x64, osx-arm64) e come `dotnet tool` (`ToolCommandName=mg3orch`).
 - **Libreria.** Il progetto `Mg3.Orchestrator.Core` deve essere utilizzabile senza la CLI, tramite `services.AddMg3Orchestrator(config)` e `IOrchestratorQueryService.ExecuteAsync(request, ct)`.
 
 ## 8. Architettura (SOLID)
@@ -313,7 +312,7 @@ L'agente considera il lavoro **concluso** solo quando tutte queste verifiche dan
 
 1. `dotnet build -c Release` termina con 0 errori e 0 warning.
 2. `dotnet test` termina con tutti i test verdi e la copertura richiesta al §10.
-3. `dotnet publish -c Release -r linux-x64 -p:PublishAot=true` termina senza warning di trimming o AOT.
+3. `dotnet publish src/Mg3.Orchestrator.Cli -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true` termina con 0 errori e 0 warning.
 4. `mg3orch schema`, `mg3orch catalog` e `mg3orch config validate` funzionano contro WireMock.
 5. Nel codice non restano `TODO`, `NotImplementedException`, codice commentato o segreti.
 6. Sono presenti `README.md` (installazione, configurazione, riferimento della DSL con almeno 15 esempi, exit code, integrazione con un harness IA e con un'applicazione .NET), `ASSUMPTIONS.md` e `CHANGELOG.md`.
