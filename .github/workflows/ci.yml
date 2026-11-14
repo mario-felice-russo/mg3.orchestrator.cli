@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build-test:
+    name: Build, test e copertura
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build (0 warning ammessi)
+        run: dotnet build -c Release --no-restore
+
+      - name: Test con copertura
+        run: >
+          dotnet test -c Release --no-build
+          --settings coverage.runsettings
+          --collect:"XPlat Code Coverage"
+          --results-directory coverage
+          --logger "trx;LogFilePrefix=test"
+
+      - name: Report di copertura
+        if: always()
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+          reportgenerator -reports:"coverage/**/coverage.cobertura.xml" -targetdir:coverage/report -reporttypes:"TextSummary;JsonSummary;MarkdownSummaryGithub"
+          cat coverage/report/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Soglia di copertura (85% su Query, Core, Output)
+        run: python3 build/check-coverage.py coverage/report/Summary.json 85 Mg3.Orchestrator.Query Mg3.Orchestrator.Core Mg3.Orchestrator.Output
+
+      - name: Snapshot non approvati
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-received
+          path: tests/**/*.received.*
+          if-no-files-found: ignore
+
+      - name: Risultati dei test
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            coverage/**/*.trx
+            coverage/report/
+          if-no-files-found: ignore
+
+  publish:
+    name: Publish ${{ matrix.rid }}
+    needs: build-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        rid: [linux-x64, win-x64, osx-arm64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Publish self-contained single-file
+        run: dotnet publish src/Mg3.Orchestrator.Cli -c Release -r ${{ matrix.rid }} --self-contained -p:PublishSingleFile=true -o artifacts/${{ matrix.rid }}
+
+      - name: Smoke test
+        if: matrix.rid == 'linux-x64'
+        run: |
+          ./artifacts/linux-x64/mg3orch --version
+          ./artifacts/linux-x64/mg3orch schema > /dev/null
+          ./artifacts/linux-x64/mg3orch catalog --output json > /dev/null
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mg3orch-${{ matrix.rid }}
+          path: artifacts/${{ matrix.rid }}/

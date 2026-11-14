@@ -378,6 +378,8 @@ dotnet publish src/Mg3.Orchestrator.Cli -c Release -r linux-x64 --self-contained
 
 Copertura misurata (righe, codice generato dal compilatore escluso): Query 96,9 %, Core 99,3 %, Output 98,4 %.
 
+La pipeline [CI](.github/workflows/ci.yml) esegue gli stessi passi su ogni pull request e su ogni push su `main`. Ricompila con 0 warning, esegue i test, pubblica il riepilogo della copertura e fallisce sotto l'85 % su Query, Core e Output (controllo in [`build/check-coverage.py`](build/check-coverage.py)). Produce infine gli eseguibili `linux-x64`, `win-x64` e `osx-arm64` come artifact.
+
 Gli snapshot dei formatter sono in `tests/Mg3.Orchestrator.Output.UnitTests/*.verified.txt`. Se un cambiamento dell'output è voluto, il test fallisce e produce un file `*.received.txt` da controllare e rinominare in `*.verified.txt`.
 
 ## Dipendenze
