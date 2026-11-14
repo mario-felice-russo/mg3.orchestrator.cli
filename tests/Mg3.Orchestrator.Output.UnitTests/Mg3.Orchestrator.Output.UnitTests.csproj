@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Mg3.Orchestrator.Output\Mg3.Orchestrator.Output.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Verify.Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="VerifyXunit" />
+    <Using Include="VerifyTests" />
+    <Using Include="VerifyXunit.Verifier" Static="true" />
+  </ItemGroup>
+</Project>

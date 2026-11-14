@@ -1,0 +1,10 @@
+bin/
+obj/
+artifacts/
+TestResults/
+coverage/
+*.received.*
+*.user
+.vs/
+.idea/
+mg3orch.json

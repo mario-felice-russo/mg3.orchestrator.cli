@@ -1,0 +1,22 @@
+# Changelog
+
+Il formato segue [Keep a Changelog](https://keepachangelog.com/it-IT/1.1.0/) e il progetto adotta il [versionamento semantico](https://semver.org/lang/it/).
+
+## [1.0.0] - 2026-11-14
+
+### Aggiunto
+
+- CLI `mg3orch` di sola lettura per UiPath Orchestrator, in C# su .NET 10.
+- Catalogo di 33 risorse di lettura (job, processi, pacchetti, robot, macchine, sessioni, code, asset, cartelle, utenti, log, audit, trigger, statistiche e altre), con azioni `list`, `get`, `count` e azioni specifiche.
+- Comando `odata get` per i percorsi non presenti nel catalogo.
+- Linguaggio di query a pipeline: `where`, `select`, `orderby`, `take`, `skip`, `distinct`, `groupby`, `aggregate`, `join`, `left join`, `flatten`, `count`, con funzioni su testo e date.
+- Planner con pushdown verso OData e verifica di equivalenza; `--explain` e `--no-pushdown`.
+- Esecuzione batch con dipendenze tra comandi (`from $id`), parallelismo e `stopOnError`.
+- Output JSON originale (pagine unite), envelope opzionale, testo in stile table, list, markdown e csv.
+- Autenticazione OAuth client credentials, Personal Access Token e legacy on‑prem; cache del token in memoria o su disco.
+- Configurazione a strati (file con profili, variabili d'ambiente, riga di comando, richiesta batch) con validazione e segreti `env:`/`file:`.
+- Retry con backoff e `Retry-After`, circuit breaker, timeout per tentativo e timeout globale.
+- Exit code documentati e garanzie di terminazione.
+- Comandi di servizio `catalog`, `schema` (manifest dei tool per harness IA), `config validate`, `auth test`.
+- Uso come libreria tramite `AddMg3Orchestrator` e `IOrchestratorQueryService`.
+- 354 test (unitari, snapshot e d'integrazione con WireMock).

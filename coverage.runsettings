@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Include>[Mg3.Orchestrator.*]*,[mg3orch]*</Include>
+          <Exclude>[Mg3.Orchestrator.*.UnitTests]*,[Mg3.Orchestrator.IntegrationTests]*</Exclude>
+          <!-- Codice generato dal compilatore (es. [GeneratedRegex]): non scritto a mano, escluso dalla misura. -->
+          <ExcludeByAttribute>GeneratedCodeAttribute</ExcludeByAttribute>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

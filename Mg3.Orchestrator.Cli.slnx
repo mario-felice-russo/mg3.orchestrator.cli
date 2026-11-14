@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Mg3.Orchestrator.Abstractions/Mg3.Orchestrator.Abstractions.csproj" />
+    <Project Path="src/Mg3.Orchestrator.Catalog/Mg3.Orchestrator.Catalog.csproj" />
+    <Project Path="src/Mg3.Orchestrator.Cli/Mg3.Orchestrator.Cli.csproj" />
+    <Project Path="src/Mg3.Orchestrator.Core/Mg3.Orchestrator.Core.csproj" />
+    <Project Path="src/Mg3.Orchestrator.Infrastructure/Mg3.Orchestrator.Infrastructure.csproj" />
+    <Project Path="src/Mg3.Orchestrator.Output/Mg3.Orchestrator.Output.csproj" />
+    <Project Path="src/Mg3.Orchestrator.Query/Mg3.Orchestrator.Query.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Mg3.Orchestrator.Core.UnitTests/Mg3.Orchestrator.Core.UnitTests.csproj" />
+    <Project Path="tests/Mg3.Orchestrator.Infrastructure.UnitTests/Mg3.Orchestrator.Infrastructure.UnitTests.csproj" />
+    <Project Path="tests/Mg3.Orchestrator.IntegrationTests/Mg3.Orchestrator.IntegrationTests.csproj" />
+    <Project Path="tests/Mg3.Orchestrator.Output.UnitTests/Mg3.Orchestrator.Output.UnitTests.csproj" />
+    <Project Path="tests/Mg3.Orchestrator.Query.UnitTests/Mg3.Orchestrator.Query.UnitTests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,48 @@
+﻿## jobs list — 3 righe
+Id:                 1001
+Key:                00000000-0000-0000-0000-000000000001
+State:              Faulted
+ReleaseName:        Ordini
+ReleaseVersionId:   11
+HostMachineName:    VM02
+Source:             Manual
+JobPriority:        Normal
+CreationTime:       2026-11-01 09:37:00
+StartTime:          2026-11-01 09:38:00
+EndTime:            2026-11-01 09:44:00
+Info:               Errore di sistema: importo non valido (…
+OrganizationUnitId: 7
+Robot:              {"Id":501,"Name":"Robot-VM02"}
+Tags:               []
+
+Id:                 1002
+Key:                00000000-0000-0000-0000-000000000002
+State:              Running
+ReleaseName:        Pagamenti
+ReleaseVersionId:   12
+HostMachineName:    VM03
+Source:             Schedule
+JobPriority:        High
+CreationTime:       2026-11-01 10:14:00
+StartTime:          2026-11-01 10:15:00
+EndTime:
+Info:               Job completato
+OrganizationUnitId: 7
+Robot:              {"Id":502,"Name":"Robot-VM03"}
+Tags:               []
+
+Id:                 1003
+Key:                00000000-0000-0000-0000-000000000003
+State:              Stopped
+ReleaseName:        Report
+ReleaseVersionId:   13
+HostMachineName:    VM01
+Source:             Manual
+JobPriority:        Low
+CreationTime:       2026-11-01 10:51:00
+StartTime:          2026-11-01 10:52:00
+EndTime:            2026-11-01 11:00:00
+Info:               Job completato
+OrganizationUnitId: 7
+Robot:              {"Id":500,"Name":"Robot-VM01"}
+Tags:               []

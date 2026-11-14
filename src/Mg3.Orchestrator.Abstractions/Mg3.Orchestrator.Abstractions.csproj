@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Mg3.Orchestrator.Abstractions</RootNamespace>
+    <Description>Contratti e modelli immutabili di mg3orch.</Description>
+  </PropertyGroup>
+</Project>
