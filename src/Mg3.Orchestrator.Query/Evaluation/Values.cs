@@ -24,11 +24,22 @@ public static partial class Values
         return value.GetValueKind() switch
         {
             JsonValueKind.String => value.GetValue<string>(),
-            JsonValueKind.Number => value.TryGetValue<decimal>(out var d) ? d : (decimal)value.GetValue<double>(),
+            JsonValueKind.Number => ToDecimal(value),
             JsonValueKind.True => true,
             JsonValueKind.False => false,
             _ => null,
         };
+    }
+
+    /// <summary>Numeri fuori dal range di decimal (es. 1e400) diventano null: non sono confrontabili in modo affidabile.</summary>
+    private static decimal? ToDecimal(JsonValue value)
+    {
+        if (value.TryGetValue<decimal>(out var d))
+        {
+            return d;
+        }
+
+        return value.TryGetValue<double>(out var dbl) && double.IsFinite(dbl) && Math.Abs(dbl) < (double)decimal.MaxValue ? (decimal)dbl : null;
     }
 
     public static JsonNode? ToJson(object? value) => value switch

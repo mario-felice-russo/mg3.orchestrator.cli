@@ -1,0 +1,4 @@
+﻿Id,Key,State,ReleaseName,ReleaseVersionId,HostMachineName,Source,JobPriority,CreationTime,StartTime,EndTime,Info,OrganizationUnitId,Robot,Tags
+1001,00000000-0000-0000-0000-000000000001,Faulted,Ordini,11,VM02,Manual,Normal,2026-11-01 09:37:00,2026-11-01 09:38:00,2026-11-01 09:44:00,Errore di sistema: importo non valido (€ 10),7,"{""Id"":501,""Name"":""Robot-VM02""}",[]
+1002,00000000-0000-0000-0000-000000000002,Running,Pagamenti,12,VM03,Schedule,High,2026-11-01 10:14:00,2026-11-01 10:15:00,,Job completato,7,"{""Id"":502,""Name"":""Robot-VM03""}",[]
+1003,00000000-0000-0000-0000-000000000003,Stopped,Report,13,VM01,Manual,Low,2026-11-01 10:51:00,2026-11-01 10:52:00,2026-11-01 11:00:00,Job completato,7,"{""Id"":500,""Name"":""Robot-VM01""}",[]

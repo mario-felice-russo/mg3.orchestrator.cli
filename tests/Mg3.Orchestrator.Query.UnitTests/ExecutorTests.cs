@@ -216,4 +216,65 @@ public sealed class ExecutorTests
         QueryHost.Run("where v == 10", rows).Rows.Count.ShouldBe(1);
         QueryHost.Run("where v == true", rows).Rows.Count.ShouldBe(1);
     }
+
+    [Fact]
+    public void DottedOutputNamesCanBeReferencedLater()
+    {
+        var rows = Rows("from jobs as j | join releases as r on j.ReleaseName == r.Name | groupby r.ProcessKey | orderby count desc, r.ProcessKey | take 1");
+        rows.Single()!.ToJsonString().ShouldBe("{\"r.ProcessKey\":\"FattureProcess\",\"count\":10}");
+    }
+
+    [Fact]
+    public void LenAndDateHandleEveryInput()
+    {
+        var row = Rows("where Id == 1004 | select a = len(Tags), b = len([1, 2, 3]), c = len(Id), d = date(Missing), e = len(Missing)").Single()!;
+        row.ToJsonString().ShouldBe("{\"a\":2,\"b\":3,\"c\":null,\"d\":null,\"e\":null}");
+    }
+
+    [Fact]
+    public void FlattenNestedAndAliasedPaths()
+    {
+        var rows = new JsonNode?[] { JsonNode.Parse("{\"Id\":1,\"Data\":{\"Items\":[\"a\",\"b\"]}}"), JsonNode.Parse("[1]") };
+        var nested = QueryHost.Run("flatten Data.Items | select Id, Data.Items", rows).Rows;
+        nested.Select(r => r?.ToJsonString()).ShouldBe(["{\"Id\":1,\"Data.Items\":\"a\"}", "{\"Id\":1,\"Data.Items\":\"b\"}", "{\"Id\":null,\"Data.Items\":null}"]);
+        var aliased = QueryHost.Run("from x as s | flatten s.Data.Items | select s.Id", rows).Rows;
+        aliased.Count.ShouldBe(3);
+        QueryHost.Run("flatten Data.Missing.Items", rows).Rows.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void JoinSkipsNonObjectsAndNullKeys()
+    {
+        var left = new JsonNode?[] { JsonNode.Parse("[1]"), JsonNode.Parse("{\"K\":null}"), JsonNode.Parse("{\"K\":1}") };
+        var right = new JsonNode?[] { JsonNode.Parse("{\"K\":null}"), JsonNode.Parse("{\"K\":1,\"V\":\"x\"}"), JsonNode.Parse("{\"K\":1,\"V\":\"y\"}") };
+        var sources = new Dictionary<string, IReadOnlyList<JsonNode?>> { ["$r"] = right };
+        QueryHost.Run("join $r as r on K == r.K | select r.V", left, sources).Rows.Select(r => r!.ToJsonString()).ShouldBe(["{\"r.V\":\"x\"}", "{\"r.V\":\"y\"}"]);
+        QueryHost.Run("left join $r as r on K == r.K", left, sources).Rows.Count.ShouldBe(3);
+        QueryHost.Run("left join $r as r on K == r.K", left, sources, maxJoinRows: 1).Truncated.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ValueHelpersCoverAllTypes()
+    {
+        Evaluation.Values.ToJson(TimeSpan.FromMinutes(1))!.ToJsonString().ShouldBe("\"00:01:00\"");
+        Evaluation.Values.ToJson(new object?[] { 1m, "a" })!.ToJsonString().ShouldBe("[1,\"a\"]");
+        Evaluation.Values.ToJson(42)!.ToJsonString().ShouldBe("\"42\"");
+        Evaluation.Values.CanonicalKey(TimeSpan.FromTicks(5)).ShouldBe("p:5");
+        Evaluation.Values.CanonicalKey(new object?[] { null, true }).ShouldBe("l:[n:,b:1]");
+        Evaluation.Values.CanonicalKey(Fixtures.Now).ShouldBe("t:2026-11-02T12:00:00Z");
+        Evaluation.Values.CanonicalKey(3).ShouldBe("o:3");
+        Evaluation.Values.Compare(TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(2)).ShouldBeLessThan(0);
+        Evaluation.Values.Compare(true, false).ShouldBeGreaterThan(0);
+        Evaluation.Values.Compare(Fixtures.Now, "2026-11-01").ShouldBeGreaterThan(0);
+        Evaluation.Values.TryNumber(true, out _).ShouldBeFalse();
+        Evaluation.Values.Describe(null).ShouldBe("null");
+        Evaluation.Values.FromJson(JsonNode.Parse("1e400")).ShouldBeNull();
+    }
+
+    [Fact]
+    public void TokenDescriptions()
+    {
+        new Parsing.Token(Parsing.TokenKind.StringLiteral, "x", "x", 0).Describe().ShouldBe("stringa 'x'");
+        new Parsing.Token(Parsing.TokenKind.End, string.Empty, null, 0).Describe().ShouldBe("fine della query");
+    }
 }

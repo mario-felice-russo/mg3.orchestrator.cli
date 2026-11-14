@@ -57,7 +57,8 @@ public sealed class OrchestratorQueryService(IQueryParser parser, ICommandExecut
 
         if (!result.IsSuccess && scope.Options.StopOnError)
         {
-            await stopCts.CancelAsync().ConfigureAwait(false);
+            // Cancel sincrono: il token collegato deve risultare annullato prima che parta il comando successivo.
+            stopCts.Cancel();
         }
 
         return result;
@@ -85,6 +86,11 @@ public sealed class OrchestratorQueryService(IQueryParser parser, ICommandExecut
 
         try
         {
+            if (scope.IsStopped)
+            {
+                return CommandExecutor.Skipped(command, "Non eseguito: un altro comando è fallito (stopOnError).", 0);
+            }
+
             return await executor.ExecuteAsync(command, dependencies, scope, token).ConfigureAwait(false);
         }
         finally

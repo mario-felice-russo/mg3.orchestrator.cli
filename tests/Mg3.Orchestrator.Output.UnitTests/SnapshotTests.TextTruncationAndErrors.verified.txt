@@ -1,0 +1,16 @@
+﻿## primo — 5 righe
+Id    Key           State    ReleaseName  ReleaseVersionId  HostMachineName  Source    JobPriority  CreationTime  StartTime     EndTime       Info          OrganizationUnitId  Robot         Tags
+----  ------------  -------  -----------  ----------------  ---------------  --------  -----------  ------------  ------------  ------------  ------------  ------------------  ------------  ----
+1001  00000000-00…  Faulted  Ordini       11                VM02             Manual    Normal       2026-11-01 …  2026-11-01 …  2026-11-01 …  Errore di s…  7                   {"Id":501,"…  []
+1002  00000000-00…  Running  Pagamenti    12                VM03             Schedule  High         2026-11-01 …  2026-11-01 …                Job complet…  7                   {"Id":502,"…  []
+[troncato: mostrate 2 di 40 — usa take/skip o filtri più stretti]
+
+## limitato — 2 righe
+Id    Key           State    ReleaseName  ReleaseVersionId  HostMachineName  Source    JobPriority  CreationTime  StartTime     EndTime       Info          OrganizationUnitId  Robot         Tags
+----  ------------  -------  -----------  ----------------  ---------------  --------  -----------  ------------  ------------  ------------  ------------  ------------------  ------------  ----
+1001  00000000-00…  Faulted  Ordini       11                VM02             Manual    Normal       2026-11-01 …  2026-11-01 …  2026-11-01 …  Errore di s…  7                   {"Id":501,"…  []
+1002  00000000-00…  Running  Pagamenti    12                VM03             Schedule  High         2026-11-01 …  2026-11-01 …                Job complet…  7                   {"Id":502,"…  []
+[troncato: mostrate 2 righe; altri dati oltre i limiti (limits.maxItems/maxPages o timeout) — usa filtri più stretti]
+
+## rotto
+ERRORE [4]: Risorsa non trovata (404)

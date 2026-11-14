@@ -173,7 +173,7 @@ public sealed class CommandResolver(IResourceCatalog catalog, Mg3Profile profile
                 continue;
             }
 
-            if (c is '"' or '\'')
+            if (c is '"' or '\'' && current.Length == 0)
             {
                 quote = c;
             }

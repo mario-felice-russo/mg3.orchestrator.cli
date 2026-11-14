@@ -87,6 +87,16 @@ public sealed class ExpressionEvaluator
             start = 1;
         }
 
+        if (path.Count - start > 1 && row is JsonObject flat)
+        {
+            var dotted = string.Join('.', path.Skip(start));
+            if (HasProperty(flat, dotted))
+            {
+                found = true;
+                return FindProperty(flat, dotted);
+            }
+        }
+
         var current = row;
         for (var i = start; i < path.Count; i++)
         {
