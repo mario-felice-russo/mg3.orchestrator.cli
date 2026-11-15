@@ -25,7 +25,7 @@ public static class ToolManifest
             }
             else
             {
-                tools.Add(Tool(baseName, resource.Name, resource.Description, Schema(("query", "string", QueryDescription), ("folder", "string", "Cartella: id, key o percorso."))));
+                tools.Add(Tool(baseName, resource.Name, resource.Description, Schema(("query", "string", QueryDescription))));
             }
 
             foreach (var action in resource.ExtraActions)
@@ -38,8 +38,7 @@ public static class ToolManifest
             ("path", "string", "Percorso relativo, es. odata/Jobs."),
             ("filter", "string", "$filter OData."),
             ("select", "string", "$select OData."),
-            ("top", "integer", "$top OData."),
-            ("folder", "string", "Cartella."))));
+            ("top", "integer", "$top OData."))));
         tools.Add(new JsonObject
         {
             ["name"] = "run",
@@ -53,7 +52,7 @@ public static class ToolManifest
             ["name"] = "mg3orch",
             ["version"] = typeof(ToolManifest).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion?.Split('+')[0] ?? "1.0.0",
             ["description"] = "CLI di sola lettura per UiPath Orchestrator con query DSL; output testo o JSON originale.",
-            ["invocation"] = "mg3orch <risorsa> <azione> [chiave] [--query <DSL>] [--output text|json] — oppure mg3orch run --request - con la richiesta JSON su stdin.",
+            ["invocation"] = "mg3orch <risorsa> <azione> [chiave] [--query <DSL>] --config <file.json> — oppure mg3orch run --request - --config <file.json> con la richiesta JSON su stdin. Formato dell'output e cartella sono nel file di configurazione.",
             ["exitCodes"] = ExitCodeTable(),
             ["envelopeSchema"] = EnvelopeSchema(),
             ["tools"] = tools,
@@ -77,8 +76,7 @@ public static class ToolManifest
             ("orderby", "string", "$orderby OData."),
             ("top", "integer", "Numero massimo di elementi."),
             ("skip", "integer", "Elementi da saltare."),
-            ("expand", "string", "$expand OData."),
-            ("folder", "string", "Cartella: id, key o percorso."));
+            ("expand", "string", "$expand OData."));
         if (resource.TimeField is not null)
         {
             schema["properties"]!["since"] = Property("string", $"Solo elementi con {resource.TimeField} negli ultimi N (es. 24h, 7d).");
@@ -89,7 +87,7 @@ public static class ToolManifest
 
     private static JsonObject KeyParameters()
     {
-        var schema = Schema(("key", "string", "Id numerico, key (GUID) o nome."), ("query", "string", QueryDescription), ("folder", "string", "Cartella."));
+        var schema = Schema(("key", "string", "Id numerico, key (GUID) o nome."), ("query", "string", QueryDescription));
         schema["required"] = new JsonArray("key");
         return schema;
     }
@@ -114,7 +112,6 @@ public static class ToolManifest
         ["additionalProperties"] = false,
         ["properties"] = new JsonObject
         {
-            ["config"] = new JsonObject { ["type"] = "object", ["description"] = "Override della configurazione (stessa struttura del profilo, più 'profile')." },
             ["commands"] = new JsonObject
             {
                 ["type"] = "array",
@@ -127,7 +124,7 @@ public static class ToolManifest
                     {
                         ["id"] = Property("string", "Identificativo univoco, referenziabile con '$id'."),
                         ["command"] = Property("string", "Es. 'jobs list', 'jobs get 42', 'stats jobs'."),
-                        ["args"] = new JsonObject { ["type"] = "object", ["description"] = "folder, filter, select, orderby, top, skip, expand, since, key." },
+                        ["args"] = new JsonObject { ["type"] = "object", ["description"] = "folder (sostituisce quella del file per questo comando), filter, select, orderby, top, skip, expand, since, key." },
                         ["query"] = Property("string", QueryDescription),
                     },
                 },

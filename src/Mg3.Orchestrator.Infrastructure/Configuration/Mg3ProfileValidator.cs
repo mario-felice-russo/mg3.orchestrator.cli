@@ -26,21 +26,21 @@ public sealed class Mg3ProfileValidator : IValidateOptions<Mg3Profile>
     {
         if (string.IsNullOrWhiteSpace(settings.BaseUrl))
         {
-            errors.Add("[orchestrator.baseUrl] obbligatorio.");
+            errors.Add("[url] obbligatorio: indica l'URL di Orchestrator.");
         }
         else if (!Uri.TryCreate(settings.BaseUrl, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
         {
-            errors.Add($"[orchestrator.baseUrl] deve essere un URL http(s) assoluto, trovato '{settings.BaseUrl}'.");
+            errors.Add($"[url] deve essere un URL http(s) assoluto, trovato '{settings.BaseUrl}'.");
         }
 
         if (settings.Folder.Path is { } path && path.Any(c => c > 127 || char.IsControl(c)))
         {
-            errors.Add("[orchestrator.folder.path] può contenere solo caratteri ASCII stampabili; usare folder.id o folder.key.");
+            errors.Add("[folderPath] può contenere solo caratteri ASCII stampabili; usa folderId o folderKey.");
         }
 
         if (settings.Folder.Key is { } key && !Guid.TryParse(key, out _))
         {
-            errors.Add($"[orchestrator.folder.key] deve essere un GUID, trovato '{key}'.");
+            errors.Add($"[folderKey] deve essere un GUID, trovato '{key}'.");
         }
     }
 
@@ -50,7 +50,7 @@ public sealed class Mg3ProfileValidator : IValidateOptions<Mg3Profile>
         {
             if (string.IsNullOrWhiteSpace(value))
             {
-                errors.Add($"[auth.{key}] obbligatorio con auth.mode = {auth.Mode}.");
+                errors.Add($"[{key}] obbligatorio con {Credentials(auth.Mode)}.");
             }
         }
 
@@ -60,9 +60,10 @@ public sealed class Mg3ProfileValidator : IValidateOptions<Mg3Profile>
                 Require(auth.IdentityUrl, "identityUrl");
                 Require(auth.ClientId, "clientId");
                 Require(auth.ClientSecret, "clientSecret");
+                Require(auth.Scopes, "scopes");
                 if (auth.IdentityUrl is not null && !Uri.TryCreate(auth.IdentityUrl, UriKind.Absolute, out _))
                 {
-                    errors.Add($"[auth.identityUrl] deve essere un URL assoluto, trovato '{auth.IdentityUrl}'.");
+                    errors.Add($"[identityUrl] deve essere un URL assoluto, trovato '{auth.IdentityUrl}'.");
                 }
 
                 break;
@@ -77,9 +78,16 @@ public sealed class Mg3ProfileValidator : IValidateOptions<Mg3Profile>
 
         foreach (var scope in WriteScopes(auth.Scopes))
         {
-            errors.Add($"[auth.scopes] lo scope '{scope}' non è di sola lettura: sono ammessi solo scope '*.Read'.");
+            errors.Add($"[scopes] lo scope '{scope}' non è di sola lettura: sono ammessi solo scope '*.Read'.");
         }
     }
+
+    private static string Credentials(AuthMode mode) => mode switch
+    {
+        AuthMode.ClientCredentials => "le credenziali di un'applicazione esterna (clientId)",
+        AuthMode.Pat => "un Personal Access Token",
+        _ => "utente e password",
+    };
 
     private static void ValidateRanges(Mg3Profile options, List<string> errors)
     {
@@ -91,16 +99,16 @@ public sealed class Mg3ProfileValidator : IValidateOptions<Mg3Profile>
             }
         }
 
-        Range(options.Http.TimeoutSeconds, 1, 600, "http.timeoutSeconds");
-        Range(options.Http.MaxRetries, 0, 10, "http.maxRetries");
-        Range(options.Http.RetryBaseDelayMs, 0, 60_000, "http.retryBaseDelayMs");
-        Range(options.Http.PageSize, 1, 1000, "http.pageSize");
-        Range(options.Limits.MaxItems, 1, 1_000_000, "limits.maxItems");
-        Range(options.Limits.MaxPages, 1, 10_000, "limits.maxPages");
-        Range(options.Limits.GlobalTimeoutSeconds, 1, 3600, "limits.globalTimeoutSeconds");
-        Range(options.Limits.MaxJoinRows, 1, 10_000_000, "limits.maxJoinRows");
-        Range(options.Output.MaxRows, 1, 1_000_000, "output.maxRows");
-        Range(options.Output.MaxCellWidth, 4, 10_000, "output.maxCellWidth");
+        Range(options.Http.TimeoutSeconds, 1, 600, "advanced.timeoutSeconds");
+        Range(options.Http.MaxRetries, 0, 10, "advanced.maxRetries");
+        Range(options.Http.RetryBaseDelayMs, 0, 60_000, "advanced.retryBaseDelayMs");
+        Range(options.Http.PageSize, 1, 1000, "advanced.pageSize");
+        Range(options.Limits.MaxItems, 1, 1_000_000, "advanced.maxItems");
+        Range(options.Limits.MaxPages, 1, 10_000, "advanced.maxPages");
+        Range(options.Limits.GlobalTimeoutSeconds, 1, 3600, "advanced.globalTimeoutSeconds");
+        Range(options.Limits.MaxJoinRows, 1, 10_000_000, "advanced.maxJoinRows");
+        Range(options.Output.MaxRows, 1, 1_000_000, "advanced.maxRows");
+        Range(options.Output.MaxCellWidth, 4, 10_000, "advanced.maxCellWidth");
     }
 
     private static void ValidateOutput(OutputSettings output, List<string> errors)
@@ -111,7 +119,7 @@ public sealed class Mg3ProfileValidator : IValidateOptions<Mg3Profile>
         }
         catch (TimeZoneNotFoundException)
         {
-            errors.Add($"[output.timeZone] fuso orario sconosciuto '{output.TimeZone}'.");
+            errors.Add($"[advanced.timeZone] fuso orario sconosciuto '{output.TimeZone}'.");
         }
 
         try
@@ -120,7 +128,7 @@ public sealed class Mg3ProfileValidator : IValidateOptions<Mg3Profile>
         }
         catch (CultureNotFoundException)
         {
-            errors.Add($"[output.culture] cultura sconosciuta '{output.Culture}'.");
+            errors.Add($"[advanced.culture] cultura sconosciuta '{output.Culture}'.");
         }
     }
 }

@@ -22,7 +22,7 @@ Gli utilizzatori sono due:
 ## 2. Principi non negoziabili
 
 1. **Sola lettura.** L'unico verbo HTTP consentito verso Orchestrator è `GET`. Unica eccezione: il `POST` verso l'endpoint del token. Il vincolo va imposto da un `DelegatingHandler` che rifiuta qualsiasi altra richiesta. Un test deve verificarlo.
-2. **Nessuna interazione.** La CLI non chiede mai input all'utente, non apre browser e non mostra spinner o barre di avanzamento.
+2. **Nessuna interazione.** La CLI non chiede mai input all'utente (unica eccezione: `init`, solo per i valori non passati come opzioni), non apre browser e non mostra spinner o barre di avanzamento.
 3. **Separazione dei flussi.** Su `stdout` va solo il risultato. Diagnostica e log vanno su `stderr`.
 4. **Nessun segreto in uscita.** Segreti e token non compaiono mai in output, log, messaggi d'errore o dump di configurazione: vanno mascherati con `***`.
 5. **SOLID.** Ogni nuova risorsa, stadio di query o formato di output si aggiunge creando una nuova classe registrata nel container DI, senza modificare il codice esistente.
@@ -32,58 +32,31 @@ Gli utilizzatori sono due:
 
 ### 3.1 Configurazione
 
-La configurazione si risolve per strati, dal meno al più prioritario:
+Tutta la configurazione sta in **un solo file JSON**, il cui percorso si indica con `--config <percorso>` (obbligatorio, salvo per `catalog`, `schema` e `--help`). Non ci sono variabili d'ambiente, profili, file predefiniti né opzioni da riga di comando che sovrascrivono il file. Per un altro ambiente si usa un altro file.
 
-1. file JSON (`--config <path>`, oppure `MG3ORCH_CONFIG`, oppure `./mg3orch.json`);
-2. variabili d'ambiente `MG3ORCH__<Sezione>__<Chiave>`;
-3. opzioni da riga di comando;
-4. blocco `config` della richiesta batch (§3.3).
-
-Il file supporta più **profili**, selezionabili con `--profile`.
+Il file è piatto e minimale; obbligatori solo `url` e un tipo di credenziali:
 
 ```json
 {
-  "profiles": {
-    "default": {
-      "orchestrator": {
-        "baseUrl": "https://cloud.uipath.com/{org}/{tenant}/orchestrator_/",
-        "tenantName": null,
-        "folder": { "path": "Shared/Finance", "id": null, "key": null }
-      },
-      "auth": {
-        "mode": "ClientCredentials",
-        "identityUrl": "https://cloud.uipath.com/identity_/connect/token",
-        "clientId": "env:UIPATH_CLIENT_ID",
-        "clientSecret": "env:UIPATH_CLIENT_SECRET",
-        "scopes": "OR.Jobs.Read OR.Folders.Read OR.Queues.Read OR.Robots.Read OR.Machines.Read OR.Assets.Read OR.Execution.Read OR.Monitoring.Read"
-      },
-      "http": { "timeoutSeconds": 30, "maxRetries": 3, "pageSize": 500 },
-      "limits": { "maxItems": 1000, "maxPages": 50, "globalTimeoutSeconds": 120, "maxJoinRows": 100000 },
-      "output": {
-        "format": "text",
-        "textStyle": "table",
-        "envelope": false,
-        "maxRows": 200,
-        "maxCellWidth": 80,
-        "timeZone": "UTC",
-        "culture": "it-IT"
-      }
-    }
-  }
+  "url": "https://cloud.uipath.com/{org}/{tenant}/orchestrator_/",
+  "folderId": 298109,
+  "token": "<Personal Access Token>",
+  "format": "text",
+  "style": "table",
+  "advanced": { "timeZone": "Europe/Rome" }
 }
 ```
 
 Regole:
 
-- `auth.mode` ammette tre valori:
-  - `ClientCredentials`: applicazione esterna OAuth, per Automation Cloud o Identity Server on‑prem;
-  - `Pat`: Personal Access Token, inviato come bearer;
-  - `Legacy`: `POST /api/Account/Authenticate` con tenant, utente e password, solo on‑prem.
-- Gli scope richiesti devono essere esclusivamente `*.Read`. Se ne compare uno di scrittura, la validazione fallisce con exit code `2`.
-- Un valore nella forma `env:NOME` si risolve dalla variabile d'ambiente `NOME`; un valore nella forma `file:percorso` dal contenuto del file indicato.
-- La cartella di lavoro si comunica a Orchestrator con l'header `X-UIPATH-OrganizationUnitId` (se è noto l'`id`), `X-UIPATH-FolderKey` o `X-UIPATH-FolderPath`, in quest'ordine di priorità. Per l'on‑prem multi‑tenant si aggiunge `X-UIPATH-TenantName`.
-- Il token va tenuto in cache in memoria per la durata del processo. Una cache su disco è opzionale, va attivata esplicitamente e il file deve avere permessi `600`.
-- La configurazione si valida all'avvio con `IValidateOptions<T>`. Un errore produce un messaggio che indica la chiave e il motivo.
+- Le credenziali sono una sola tra: `token` (Personal Access Token); `clientId` + `clientSecret` + `scopes` (applicazione esterna OAuth); `username` + `password` (legacy on‑prem, `POST /api/Account/Authenticate`). La modalità si ricava dalle chiavi presenti; indicarne più di una è un errore.
+- `identityUrl` è facoltativo: in cloud vale `https://<host>/identity_/connect/token`, on‑prem `https://<host>/identity/connect/token`.
+- Gli scope devono essere esclusivamente `*.Read`. Se ne compare uno di scrittura, la validazione fallisce con exit code `2`.
+- La cartella è una sola tra `folderId`, `folderPath`, `folderKey`; si comunica con l'header `X-UIPATH-OrganizationUnitId`, `X-UIPATH-FolderKey` o `X-UIPATH-FolderPath`. Per l'on‑prem multi‑tenant `tenantName` diventa `X-UIPATH-TenantName`.
+- Tutte le altre impostazioni (envelope, righe e colonne del testo, fuso orario, cultura, timeout, retry, paginazione, limiti, cache del token, verbosità) stanno nella sezione facoltativa `advanced`, con default sensati.
+- Il token va tenuto in cache in memoria per la durata del processo. Una cache su disco è opzionale e il file deve avere permessi `600`.
+- La configurazione si valida all'avvio con `IValidateOptions<T>`. Un errore indica la chiave, il motivo e, per le chiavi sconosciute, l'elenco di quelle ammesse.
+- `mg3orch init --config <percorso>` crea il file: ricava organizzazione, tenant e cartella (`fid`) dall'URL copiato dal browser, chiede solo i valori mancanti, valida e scrive con permessi `600`. È l'unico comando che può fare domande.
 
 ### 3.2 Comandi singoli (modalità CLI)
 
@@ -95,12 +68,15 @@ Sintassi: `mg3orch <risorsa> <azione> [argomenti] [opzioni]`
 | `get <id\|key\|name>` | Singola entità |
 | `count` | Conteggio (`$count`) |
 
-Opzioni comuni: `--folder`, `--profile`, `--query "<DSL>"`, `--filter "<OData $filter>"` (passthrough grezzo), `--select`, `--orderby`, `--top`, `--skip`, `--expand`, `--since <durata>`, `--output text|json`, `--text-style table|list|markdown|csv`, `--envelope`.
+Opzioni di lettura: `--query "<DSL>"`, `--filter "<OData $filter>"` (passthrough grezzo), `--select`, `--orderby`, `--top`, `--skip`, `--expand`, `--since <durata>`. Opzioni globali: `--config <file>`, `--explain`. Formato dell'output e cartella stanno solo nel file.
+
+Gli errori d'uso sono in italiano, su una riga, con il significato dell'exit code e, quando possibile, il comando corretto (es. `mg3orch --auth test` → «Forse intendevi: mg3orch auth test»).
 
 Comandi di servizio:
 
 | Comando | Scopo |
 |---|---|
+| `init` | Crea il file di configurazione (§3.1) |
 | `catalog` | Elenca risorse, azioni, campi noti e campi filtrabili |
 | `schema` | Emette il manifest JSON dei tool per l'harness IA: nome, descrizione e JSON Schema dei parametri di ogni comando |
 | `config validate` | Valida la configurazione e la stampa con i segreti mascherati |
@@ -114,7 +90,6 @@ Comandi di servizio:
 
 ```json
 {
-  "config": { "profile": "default", "output": { "format": "json" } },
   "commands": [
     { "id": "rel",    "command": "releases list" },
     { "id": "faults", "command": "jobs list", "args": { "since": "24h" },
@@ -207,8 +182,8 @@ functions  = now() | today() | date(s) | lower(x) | upper(x) | len(x)
 - **Date.** Si usano letterali ISO 8601 e durate come `30m`, `24h`, `7d`. È ammessa l'aritmetica `now() - 7d`.
 - **`matches`.** Usa `Regex` con timeout di 100 ms per espressione.
 - **Pushdown.** Il planner traduce in parametri OData (`$filter`, `$select`, `$orderby`, `$top`, `$skip`, `$expand`) il prefisso più lungo di stadi traducibili su una sorgente diretta. Tutto il resto si esegue in memoria. Il piano risultante si ottiene con `--explain`, che restituisce il piano e non esegue nulla.
-- **Equivalenza del pushdown.** Il risultato con pushdown attivo deve coincidere con quello ottenuto disattivandolo (`--no-pushdown`). Un test parametrico sulle fixture deve dimostrarlo.
-- **Join.** È un hash join in memoria e rispetta `limits.maxJoinRows`.
+- **Equivalenza del pushdown.** Il risultato con pushdown attivo deve coincidere con quello ottenuto disattivandolo (`BatchOptions.PushdownEnabled = false`). Un test parametrico sulle fixture deve dimostrarlo.
+- **Join.** È un hash join in memoria e rispetta `advanced.maxJoinRows`.
 - **Errori.** Gli errori di parsing riportano posizione, token atteso e token trovato, ed escono con codice `5`.
 
 ## 6. Output
@@ -218,7 +193,7 @@ functions  = now() | today() | date(s) | lower(x) | upper(x) | len(x)
 - **Senza stadi lato client:** si restituisce il payload originale di Orchestrator (`@odata.context`, `@odata.count`, `value`). Se ci sono più pagine, si concatenano in un unico `value`, conservando campi e valori senza alcuna modifica.
 - **Con stadi lato client:** stessa struttura, ma `value` contiene le righe trasformate. I nomi dei campi originali restano invariati.
 - **Batch:** si restituisce un oggetto `{ "<id>": <payload> }` nell'ordine della richiesta.
-- **`envelope = true`:** ogni payload viene incapsulato in `{ "command", "status", "durationMs", "pages", "truncated", "pushdown", "warnings", "error", "data" }`. Lo schema dell'envelope è pubblicato da `mg3orch schema`.
+- **`advanced.envelope = true`:** ogni payload viene incapsulato in `{ "command", "status", "durationMs", "pages", "truncated", "pushdown", "warnings", "error", "data" }`. Lo schema dell'envelope è pubblicato da `mg3orch schema`.
 - La serializzazione usa `System.Text.Json` con source generator. Il JSON originale non viene mai deserializzato in DTO tipizzati e poi riserializzato.
 
 ### 6.2 `format = text`
@@ -226,7 +201,7 @@ functions  = now() | today() | date(s) | lower(x) | upper(x) | len(x)
 - Stili: `table`, con colonne allineate e celle troncate a `maxCellWidth` con `…`; `list`, nella forma `chiave: valore` per record; `markdown`; `csv`.
 - Ogni sezione si apre con un'intestazione che indica comando e numero di righe, ad esempio `## faults — 37 righe`.
 - In caso di troncamento si aggiunge la riga `[troncato: mostrate 200 di 1543 — usa take/skip o filtri più stretti]`.
-- Date espresse in `output.timeZone`. Numeri formattati secondo `output.culture`, ma in `csv` si usa sempre la cultura invariante.
+- Date espresse in `advanced.timeZone`. Numeri formattati secondo `advanced.culture`, ma in `csv` si usa sempre la cultura invariante.
 - L'output è deterministico: a parità di dati, l'output è identico byte per byte. Niente colori se `stdout` non è un terminale o se è impostato `NO_COLOR`.
 
 ## 7. Requisiti non funzionali
@@ -234,7 +209,7 @@ functions  = now() | today() | date(s) | lower(x) | upper(x) | len(x)
 - **HTTP.** `IHttpClientFactory` con `Microsoft.Extensions.Http.Resilience`. Retry con backoff esponenziale e jitter solo su 408, 429 (rispettando `Retry-After`), 5xx ed errori di rete, fino a `maxRetries`. Circuit breaker per singola esecuzione.
 - **Paginazione.** Tramite `$top`/`$skip`, finché la pagina restituita è più corta della richiesta oppure si raggiunge `@odata.count`, `maxItems` o `maxPages`.
 - **Cancellazione.** Un `CancellationToken` collegato a `Ctrl+C`/SIGTERM e a `globalTimeoutSeconds` attraversa tutti i livelli.
-- **Logging.** `ILogger` su `stderr`. Livello impostato con `--verbosity quiet|normal|detailed|diagnostic`. A livello `diagnostic` si registra la URL con la query string, ma mai gli header di autorizzazione.
+- **Logging.** `ILogger` su `stderr`. Livello impostato con `advanced.verbosity` (`quiet`, `normal`, `detailed`, `diagnostic`); con `normal` su `stderr` vanno solo gli avvisi. A livello `diagnostic` si registra la URL con la query string, ma mai gli header di autorizzazione.
 - **Distribuzione.** Come eseguibile self-contained single-file (win-x64, linux-x64, osx-arm64) e come `dotnet tool` (`ToolCommandName=mg3orch`).
 - **Libreria.** Il progetto `Mg3.Orchestrator.Core` deve essere utilizzabile senza la CLI, tramite `services.AddMg3Orchestrator(config)` e `IOrchestratorQueryService.ExecuteAsync(request, ct)`.
 
@@ -288,7 +263,7 @@ Garanzie:
 - Nessuna esecuzione supera `globalTimeoutSeconds`, retry compresi. Allo scadere, la CLI emette i risultati parziali con `truncated = true` ed esce con codice `6`.
 - I limiti `maxItems`, `maxPages` e `maxJoinRows` rendono finite paginazione e join. Il loro superamento è segnalato come troncamento, non come errore.
 - I retry sono finiti e non si eseguono retry su 4xx diversi da 408 e 429.
-- In caso d'errore, `stdout` contiene comunque un output valido nel formato richiesto: in `json` un oggetto `{ "error": { "code", "message", "commandId" } }`, in `text` una riga `ERRORE [codice]: messaggio`. Il dettaglio tecnico va su `stderr`.
+- In caso d'errore, `stdout` contiene comunque un output valido nel formato richiesto: in `json` un oggetto `{ "error": { "code", "exitCode", "meaning", "message", "commandId" } }`, in `text` una sola riga `ERRORE (codice – significato): messaggio`. L'errore non va ripetuto su `stderr`; il dettaglio tecnico compare lì solo con `verbosity` `detailed` o `diagnostic`.
 - Nessuna eccezione non gestita raggiunge l'utente: un handler globale la converte in exit code `1`.
 - Il processo rilascia tutte le risorse e non lascia thread o processi figli attivi dopo l'uscita.
 

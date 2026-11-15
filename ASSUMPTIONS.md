@@ -26,23 +26,26 @@ Questo file raccoglie le ipotesi fatte durante la generazione, dove il prompt o 
 
 ## Configurazione e HTTP
 
-17. **`--folder`** sostituisce l'intera cartella del profilo (id, key e path), così che un id nel file non abbia la precedenza su un percorso passato da riga di comando.
-18. **Percorsi di cartella non ASCII** non sono ammessi negli header HTTP: la validazione chiede di usare `folder.id` o `folder.key`.
+17. **Un solo file di configurazione** (richiesta dell'utente, versione 2.0.0): niente variabili d'ambiente, profili, file predefinito né override da riga di comando. Il percorso va sempre indicato con `--config`. I segreti stanno nel file, che `init` crea con permessi `600`.
+18. **Percorsi di cartella non ASCII** non sono ammessi negli header HTTP: la validazione chiede di usare `folderId` o `folderKey`.
 19. **Durata del token legacy**: `api/Account/Authenticate` non restituisce la scadenza; si assumono 30 minuti. Per i PAT si assume un anno (la scadenza reale è gestita dal server, che risponderà 401).
 20. **Errore 400** di Orchestrator (ad esempio un `--filter` scritto male) produce exit code `2` (uso non valido); uno status non previsto (es. 418) produce `1`.
 21. **Circuit breaker**: soglie alte (90 % di errori su almeno 20 richieste in 60 s), perché una singola esecuzione della CLI fa poche richieste; serve soprattutto a fermare raffiche di errori in batch molto grandi.
-22. **Paginazione**: `$count=true` viene richiesto alla prima pagina per conoscere il totale e segnalare correttamente il troncamento. Le letture non paginate (`get`, funzioni, `odata get`) non seguono le pagine; con `odata get` si usano `--top`/`--skip`.
-23. **Cancellazione a metà paginazione**: se il timeout globale scade dopo aver ricevuto almeno una pagina, i dati parziali vengono restituiti con `truncated = true` ed exit code `6`.
+22. **`scopes` obbligatori con l'applicazione esterna**: chiedere al servizio di identità uno scope non concesso all'applicazione fa fallire il token, quindi la CLI non inventa un elenco. `init` propone un default di sola lettura che va verificato con gli scope effettivamente concessi.
+23. **`identityUrl` ricavato**: in cloud (URL con `/orchestrator_/`) vale `https://<host>/identity_/connect/token`, altrimenti `https://<host>/identity/connect/token`.
+24. **URL del browser**: `init` considera base dell'URL tutto ciò che precede `orchestrator_/` (cloud) oppure la radice dell'host (on‑prem), e prende la cartella dal parametro `fid`.
+25. **Paginazione**: `$count=true` viene richiesto alla prima pagina per conoscere il totale e segnalare correttamente il troncamento. Le letture non paginate (`get`, funzioni, `odata get`) non seguono le pagine; con `odata get` si usano `--top`/`--skip`.
+26. **Cancellazione a metà paginazione**: se il timeout globale scade dopo aver ricevuto almeno una pagina, i dati parziali vengono restituiti con `truncated = true` ed exit code `6`.
 
 ## Output
 
-24. **JSON compatto** con `JavaScriptEncoder.UnsafeRelaxedJsonEscaping`, per restare il più vicino possibile ai byte originali (niente `é` al posto di `é`). Il JSON viene riserializzato da `JsonNode`: i numeri mantengono il testo originale; eventuali escape facoltativi dell'originale (es. `\/`) possono differire.
-25. **Testo**: date convertite nel formato `aaaa-MM-gg HH:mm:ss`; caratteri di controllo (a capo, tab) sostituiti da spazi; oggetti e array mostrati come JSON compatto.
-26. **`durationMs`** nell'envelope è l'unico campo non deterministico.
+27. **JSON compatto** con `JavaScriptEncoder.UnsafeRelaxedJsonEscaping`, per restare il più vicino possibile ai byte originali (niente `é` al posto di `é`). Il JSON viene riserializzato da `JsonNode`: i numeri mantengono il testo originale; eventuali escape facoltativi dell'originale (es. `\/`) possono differire.
+28. **Testo**: date convertite nel formato `aaaa-MM-gg HH:mm:ss`; caratteri di controllo (a capo, tab) sostituiti da spazi; oggetti e array mostrati come JSON compatto.
+29. **`durationMs`** nell'envelope è l'unico campo non deterministico.
 
 ## Strumenti
 
-27. **Shouldly** al posto di FluentAssertions, che dalla versione 8 ha licenza commerciale.
-28. **xUnit 2** e **Microsoft.Extensions 10.x**, allineati a .NET 10. Le versioni 11.x disponibili su NuGet sono pensate per .NET 11.
-29. **Copertura**: il codice generato dal compilatore (`[GeneratedRegex]`) è escluso dalla misura tramite `coverage.runsettings`, perché non è scritto a mano.
-30. **Publish AOT** rimosso dai requisiti su richiesta: la distribuzione è self-contained single-file.
+30. **Shouldly** al posto di FluentAssertions, che dalla versione 8 ha licenza commerciale.
+31. **xUnit 2** e **Microsoft.Extensions 10.x**, allineati a .NET 10. Le versioni 11.x disponibili su NuGet sono pensate per .NET 11.
+32. **Copertura**: il codice generato dal compilatore (`[GeneratedRegex]`) è escluso dalla misura tramite `coverage.runsettings`, perché non è scritto a mano.
+33. **Publish AOT** rimosso dai requisiti su richiesta: la distribuzione è self-contained single-file.

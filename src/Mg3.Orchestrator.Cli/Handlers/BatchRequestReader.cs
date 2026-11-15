@@ -9,7 +9,7 @@ namespace Mg3.Orchestrator.Cli.Handlers;
 /// <summary>Legge e valida la richiesta batch JSON.</summary>
 public static class BatchRequestReader
 {
-    private static readonly HashSet<string> RootKeys = new(StringComparer.OrdinalIgnoreCase) { "config", "commands", "options" };
+    private static readonly HashSet<string> RootKeys = new(StringComparer.OrdinalIgnoreCase) { "commands", "options" };
     private static readonly HashSet<string> CommandKeys = new(StringComparer.OrdinalIgnoreCase) { "id", "command", "args", "query" };
     private static readonly HashSet<string> OptionKeys = new(StringComparer.OrdinalIgnoreCase) { "stopOnError", "parallelism" };
 
@@ -32,12 +32,6 @@ public static class BatchRequestReader
         }
 
         RejectUnknown(obj, RootKeys, "richiesta");
-        var config = Get(obj, "config") switch
-        {
-            null => null,
-            JsonObject c => (JsonObject)c.DeepClone(),
-            _ => throw new ConfigurationException("'config' deve essere un oggetto."),
-        };
         if (Get(obj, "commands") is not JsonArray commands)
         {
             throw new ConfigurationException("'commands' è obbligatorio e deve essere un array.");
@@ -55,7 +49,7 @@ public static class BatchRequestReader
         }
 
         var list = commands.Select((node, index) => ParseCommand(node, index)).ToArray();
-        return new BatchRequest(list, options, IsBatch: true, config);
+        return new BatchRequest(list, options, IsBatch: true);
     }
 
     private static CommandRequest ParseCommand(JsonNode? node, int index)

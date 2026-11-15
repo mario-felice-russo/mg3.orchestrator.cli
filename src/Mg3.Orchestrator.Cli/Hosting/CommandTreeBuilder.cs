@@ -34,6 +34,7 @@ public sealed class CommandTreeBuilder(CliEnvironment environment, IResourceCata
             AddResource(root, resource);
         }
 
+        root.Subcommands.Add(BuildInit());
         root.Subcommands.Add(BuildCatalog());
         root.Subcommands.Add(BuildSchema());
         root.Subcommands.Add(BuildConfig());
@@ -130,6 +131,40 @@ public sealed class CommandTreeBuilder(CliEnvironment environment, IResourceCata
 
     private static string? Value(ParseResult result, Option<string?> option) =>
         result.CommandResult.Command.Options.Contains(option) ? result.GetValue(option) : null;
+
+    private Command BuildInit()
+    {
+        var url = new Option<string?>("--url") { Description = "URL di Orchestrator; va bene quello copiato dal browser (cartella ricavata da 'fid')." };
+        var token = new Option<string?>("--token") { Description = "Personal Access Token." };
+        var clientId = new Option<string?>("--client-id") { Description = "Client id dell'applicazione esterna." };
+        var clientSecret = new Option<string?>("--client-secret") { Description = "Client secret dell'applicazione esterna." };
+        var scopes = new Option<string?>("--scopes") { Description = $"Scope di sola lettura (default: {InitCommand.DefaultScopes})." };
+        var username = new Option<string?>("--username") { Description = "Utente (solo on-prem)." };
+        var password = new Option<string?>("--password") { Description = "Password (solo on-prem)." };
+        var tenant = new Option<string?>("--tenant") { Description = "Tenant (solo on-prem)." };
+        var folderId = new Option<long?>("--folder-id") { Description = "Id della cartella." };
+        var folderPath = new Option<string?>("--folder-path") { Description = "Percorso della cartella, es. Shared/Finance." };
+        var force = new Option<bool>("--force") { Description = "Sovrascrive un file esistente." };
+        var command = new Command("init", "Crea il file di configurazione. Chiede i valori mancanti; con le opzioni funziona senza domande.");
+        foreach (var option in new Option[] { url, token, clientId, clientSecret, scopes, username, password, tenant, folderId, folderPath, force })
+        {
+            command.Options.Add(option);
+        }
+
+        command.SetAction((result, _) => Guard(result, context => Task.FromResult(InitCommand.Run(context, new InitOptions(
+            result.GetValue(url),
+            result.GetValue(token),
+            result.GetValue(clientId),
+            result.GetValue(clientSecret),
+            result.GetValue(scopes),
+            result.GetValue(username),
+            result.GetValue(password),
+            result.GetValue(tenant),
+            result.GetValue(folderId),
+            result.GetValue(folderPath),
+            result.GetValue(force))))));
+        return command;
+    }
 
     private Command BuildCatalog()
     {

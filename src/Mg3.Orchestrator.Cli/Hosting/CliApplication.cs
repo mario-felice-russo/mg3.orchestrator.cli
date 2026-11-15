@@ -19,7 +19,7 @@ public static class CliApplication
         {
             if (parse.Errors.Count > 0)
             {
-                return context.WriteError(new ConfigurationException(string.Join(" ", parse.Errors.Select(e => e.Message))));
+                return context.WriteError(new ConfigurationException(ParseErrorTranslator.Translate(parse)));
             }
 
             var configuration = new InvocationConfiguration
