@@ -2,6 +2,13 @@
 
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it-IT/1.1.0/) e il progetto adotta il [versionamento semantico](https://semver.org/lang/it/).
 
+## [Non rilasciato]
+
+### Aggiunto
+
+- `mg3orch` senza comandi apre un menu interattivo per i processi in errore: job falliti con messaggio e VM, riepiloghi per processo e VM, log di errore dei robot, errori di un singolo job, export CSV, cambio del periodo e aiuto. Senza `--config` cerca i file `oo-*.json` nella cartella corrente: ne usa uno, chiede quale tra più file, oppure ne crea uno con `init`.
+- Comando `mg3orch help`: aiuto in linea.
+
 ## [2.0.0] - 2026-11-15
 
 ### Modificato (incompatibile)

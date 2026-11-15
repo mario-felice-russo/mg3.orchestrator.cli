@@ -22,7 +22,7 @@ Gli utilizzatori sono due:
 ## 2. Principi non negoziabili
 
 1. **Sola lettura.** L'unico verbo HTTP consentito verso Orchestrator è `GET`. Unica eccezione: il `POST` verso l'endpoint del token. Il vincolo va imposto da un `DelegatingHandler` che rifiuta qualsiasi altra richiesta. Un test deve verificarlo.
-2. **Nessuna interazione.** La CLI non chiede mai input all'utente (unica eccezione: `init`, solo per i valori non passati come opzioni), non apre browser e non mostra spinner o barre di avanzamento.
+2. **Nessuna interazione.** La CLI non chiede mai input all'utente (eccezioni: `init`, solo per i valori non passati come opzioni, e il menu aperto da `mg3orch` senza comandi, che esce appena l'input termina), non apre browser e non mostra spinner o barre di avanzamento.
 3. **Separazione dei flussi.** Su `stdout` va solo il risultato. Diagnostica e log vanno su `stderr`.
 4. **Nessun segreto in uscita.** Segreti e token non compaiono mai in output, log, messaggi d'errore o dump di configurazione: vanno mascherati con `***`.
 5. **SOLID.** Ogni nuova risorsa, stadio di query o formato di output si aggiunge creando una nuova classe registrata nel container DI, senza modificare il codice esistente.
@@ -76,6 +76,8 @@ Comandi di servizio:
 
 | Comando | Scopo |
 |---|---|
+| *(nessuno)* | Menu interattivo per i processi in errore; se manca la configurazione esegue prima `init` |
+| `help` | Aiuto in linea |
 | `init` | Crea il file di configurazione (§3.1) |
 | `catalog` | Elenca risorse, azioni, campi noti e campi filtrabili |
 | `schema` | Emette il manifest JSON dei tool per l'harness IA: nome, descrizione e JSON Schema dei parametri di ogni comando |
