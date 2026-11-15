@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Mg3.Orchestrator.Cli": {
+      "commandName": "Project",
+      "commandLineArgs": "init"
+    }
+  }
+}

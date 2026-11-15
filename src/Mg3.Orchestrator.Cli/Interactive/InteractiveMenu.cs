@@ -15,7 +15,7 @@ namespace Mg3.Orchestrator.Cli.Interactive;
 /// </summary>
 public static class InteractiveMenu
 {
-    public const string DefaultConfigName = "mg3orch.json";
+    public const string DefaultConfigName = "oo-*.json";
 
     public static IReadOnlyList<IMenuAction> Actions { get; } =
     [
