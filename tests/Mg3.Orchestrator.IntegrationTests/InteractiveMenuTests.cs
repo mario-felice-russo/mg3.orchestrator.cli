@@ -194,6 +194,16 @@ public sealed class InteractiveMenuTests : IDisposable
     }
 
     [Fact]
+    public async Task IgnoresTheSampleFile()
+    {
+        var path = ConfigureMenu("dev");
+        File.Copy(path, Path.Combine(_cli.WorkingDirectory, InteractiveMenu.SampleFile));
+        var run = await Menu("0\n");
+        run.Out.ShouldNotContain("File di configurazione trovati:");
+        run.Out.ShouldContain("Configurazione: oo-dev.json");
+    }
+
+    [Fact]
     public async Task IgnoresFilesThatDoNotMatchThePattern()
     {
         _cli.Configure();

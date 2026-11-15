@@ -21,7 +21,7 @@ public static class HelpText
         CONFIGURAZIONE
           Tutto sta in un file JSON, uno per ambiente. Il menu senza --config cerca i file oo-*.json
           nella cartella corrente: uno viene usato, tra più file si sceglie, se non ce ne sono
-          ne crea uno (oo-<ambiente>.json) chiedendo i dati.
+          ne crea uno (oo-<ambiente>.json) chiedendo i dati. oo-sample.json è solo un esempio e viene ignorato.
             mg3orch init --config oo-dev.json --url "<URL copiato dal browser>" --token <PAT>
             mg3orch auth test --config oo-dev.json
             mg3orch config validate --config oo-dev.json
