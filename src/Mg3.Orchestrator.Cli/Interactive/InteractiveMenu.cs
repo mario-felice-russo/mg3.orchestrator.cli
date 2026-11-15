@@ -11,12 +11,15 @@ namespace Mg3.Orchestrator.Cli.Interactive;
 
 /// <summary>
 /// Menu interattivo avviato da <c>mg3orch</c> senza comandi. Senza <c>--config</c> cerca i file <c>oo-*.json</c>
-/// nella cartella corrente: uno viene usato, tra più file si sceglie, se non ce ne sono esegue prima <c>init</c>.
+/// nella cartella corrente (escluso <c>oo-sample.json</c>): uno viene usato, tra più file si sceglie, se non ce ne sono esegue prima <c>init</c>.
 /// Termina con 0 alla voce Esci o quando l'input finisce (es. stdin rediretto e vuoto).
 /// </summary>
 public static partial class InteractiveMenu
 {
     public const string ConfigPattern = "oo-*.json";
+
+    /// <summary>File d'esempio del repository: non è una configurazione reale e il menu lo ignora.</summary>
+    public const string SampleFile = "oo-sample.json";
     public const string DefaultEnvironment = "dev";
 
     [System.Text.RegularExpressions.GeneratedRegex("^[A-Za-z0-9_-]+$", System.Text.RegularExpressions.RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 100)]
@@ -87,6 +90,7 @@ public static partial class InteractiveMenu
         return Directory.GetFiles(environment.WorkingDirectory, ConfigPattern)
             .Select(Path.GetFileName)
             .OfType<string>()
+            .Where(name => !string.Equals(name, SampleFile, StringComparison.OrdinalIgnoreCase))
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }

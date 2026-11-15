@@ -10,4 +10,8 @@ coverage/
 # File di configurazione: contengono il token.
 mg3orch*.json
 oo-*.json
-!mg3orch.sample.json
+!oo-sample.json
+
+# Impostazioni personali di Visual Studio: avvio e profili di pubblicazione restano locali.
+**/Properties/launchSettings.json
+**/Properties/PublishProfiles/

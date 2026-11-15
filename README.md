@@ -149,7 +149,7 @@ La modalità di autenticazione si ricava dalle credenziali presenti: `token`, op
 | `tokenCache` / `tokenCachePath` | `memory` | `disk` attiva una cache su file con permessi `600` (default `~/.mg3orch/token-cache.json`) |
 | `verbosity` | `normal` | `quiet` (nulla su stderr), `normal` (solo avvisi), `detailed`, `diagnostic` (anche le URL chiamate) |
 
-Le chiavi non distinguono maiuscole e minuscole e il file ammette commenti `//`. Una chiave sconosciuta o un valore sbagliato producono un errore che indica la chiave e l'elenco di quelle ammesse (exit code `2`). Un esempio è in [`mg3orch.sample.json`](mg3orch.sample.json).
+Le chiavi non distinguono maiuscole e minuscole e il file ammette commenti `//`. Una chiave sconosciuta o un valore sbagliato producono un errore che indica la chiave e l'elenco di quelle ammesse (exit code `2`). Un esempio è in [`oo-sample.json`](oo-sample.json): copialo in `oo-<ambiente>.json` e inserisci URL, cartella e token. Il menu ignora `oo-sample.json`.
 
 ### `mg3orch init`
 

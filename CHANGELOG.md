@@ -8,6 +8,11 @@ Il formato segue [Keep a Changelog](https://keepachangelog.com/it-IT/1.1.0/) e i
 
 - `mg3orch` senza comandi apre un menu interattivo per i processi in errore: job falliti con messaggio e VM, riepiloghi per processo e VM, log di errore dei robot, errori di un singolo job, export CSV, cambio del periodo e aiuto. Senza `--config` cerca i file `oo-*.json` nella cartella corrente: ne usa uno, chiede quale tra più file, oppure ne crea uno con `init`.
 - Comando `mg3orch help`: aiuto in linea.
+- `oo-sample.json`: esempio di configurazione (sostituisce `mg3orch.sample.json`); il menu lo ignora.
+
+### Modificato
+
+- `launchSettings.json` e i profili di pubblicazione di Visual Studio non sono più nel repository: restano impostazioni locali.
 
 ## [2.0.0] - 2026-11-15
 
