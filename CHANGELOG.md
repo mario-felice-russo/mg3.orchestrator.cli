@@ -2,6 +2,12 @@
 
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it-IT/1.1.0/) e il progetto adotta il [versionamento semantico](https://semver.org/lang/it/).
 
+## [Non rilasciato]
+
+### Aggiunto
+
+- `scripts/mg3orch-menu.ps1`: menu PowerShell per i processi in errore (messaggio e VM), riepiloghi per processo e VM, log di errore dei robot, export CSV.
+
 ## [2.0.0] - 2026-11-15
 
 ### Modificato (incompatibile)
