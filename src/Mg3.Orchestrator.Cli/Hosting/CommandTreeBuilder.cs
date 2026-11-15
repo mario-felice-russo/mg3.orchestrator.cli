@@ -34,6 +34,8 @@ public sealed class CommandTreeBuilder(CliEnvironment environment, IResourceCata
             AddResource(root, resource);
         }
 
+        root.SetAction((result, ct) => Guard(result, context => Interactive.InteractiveMenu.RunAsync(context, ct)));
+        root.Subcommands.Add(BuildHelp());
         root.Subcommands.Add(BuildInit());
         root.Subcommands.Add(BuildCatalog());
         root.Subcommands.Add(BuildSchema());
@@ -131,6 +133,17 @@ public sealed class CommandTreeBuilder(CliEnvironment environment, IResourceCata
 
     private static string? Value(ParseResult result, Option<string?> option) =>
         result.CommandResult.Command.Options.Contains(option) ? result.GetValue(option) : null;
+
+    private static Command BuildHelp()
+    {
+        var command = new Command("help", "Aiuto in linea: menu, configurazione, comandi principali, query ed exit code.");
+        command.SetAction((result, _) =>
+        {
+            result.InvocationConfiguration.Output.WriteLine(Interactive.HelpText.Text);
+            return Task.FromResult(0);
+        });
+        return command;
+    }
 
     private Command BuildInit()
     {

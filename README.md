@@ -15,19 +15,20 @@ La CLI non invia mai richieste di scrittura: l'unico verbo HTTP ammesso è `GET`
 
 1. [Installazione](#installazione)
 2. [Avvio rapido](#avvio-rapido)
-3. [Configurazione](#configurazione)
-4. [Comandi](#comandi)
-5. [Linguaggio di query (DSL)](#linguaggio-di-query-dsl)
-6. [Output](#output)
-7. [Richiesta batch](#richiesta-batch)
-8. [Exit code e garanzie di terminazione](#exit-code-e-garanzie-di-terminazione)
-9. [Integrazione con un harness IA](#integrazione-con-un-harness-ia)
-10. [Integrazione in un'applicazione .NET](#integrazione-in-unapplicazione-net)
-11. [Architettura](#architettura)
-12. [Sviluppo e verifica](#sviluppo-e-verifica)
-13. [Dipendenze](#dipendenze)
-14. [Tracciabilità dei requisiti](#tracciabilità-dei-requisiti)
-15. [Possibili estensioni](#possibili-estensioni)
+3. [Menu interattivo](#menu-interattivo)
+4. [Configurazione](#configurazione)
+5. [Comandi](#comandi)
+6. [Linguaggio di query (DSL)](#linguaggio-di-query-dsl)
+7. [Output](#output)
+8. [Richiesta batch](#richiesta-batch)
+9. [Exit code e garanzie di terminazione](#exit-code-e-garanzie-di-terminazione)
+10. [Integrazione con un harness IA](#integrazione-con-un-harness-ia)
+11. [Integrazione in un'applicazione .NET](#integrazione-in-unapplicazione-net)
+12. [Architettura](#architettura)
+13. [Sviluppo e verifica](#sviluppo-e-verifica)
+14. [Dipendenze](#dipendenze)
+15. [Tracciabilità dei requisiti](#tracciabilità-dei-requisiti)
+16. [Possibili estensioni](#possibili-estensioni)
 
 ---
 
@@ -56,6 +57,43 @@ mg3orch jobs list --since 24h -q "where State == 'Faulted' | select Key, Release
 ```
 
 Senza `--token` (o `--client-id`/`--client-secret`), `init` chiede i valori mancanti.
+
+Oppure, più semplicemente, lancia `mg3orch` senza nulla: se manca la configurazione la crea, poi apre il [menu](#menu-interattivo).
+
+## Menu interattivo
+
+`mg3orch` lanciato **senza comandi** apre un menu per le verifiche più frequenti sui processi in errore:
+
+1. se non trova la configurazione (`--config`, oppure `mg3orch.json` nella cartella corrente o in quella del programma), esegue `init` e chiede URL e credenziali;
+2. poi mostra il menu e lo ripropone dopo ogni scelta, finché non scegli `0`.
+
+```
+=== mg3orch - processi in errore (ultime 24h) ===
+    Configurazione: D:\Mr\Publish\mg3orch.json
+  1) Job in errore: messaggio e VM
+  2) Riepilogo per processo e VM
+  3) Riepilogo per VM
+  4) Messaggi di errore dei robot (log Error/Fatal)
+  5) Messaggi di errore di un singolo job
+  6) Esporta i job in errore in CSV
+  7) Cambia periodo
+  8) Aiuto
+  0) Esci
+```
+
+| Voce | Cosa mostra |
+|---|---|
+| 1 | Job in errore nel periodo: numero, ora di fine, processo, VM e messaggio d'errore completo |
+| 2, 3 | Numero di job in errore per processo e VM, oppure per VM |
+| 4 | Messaggi di livello `Error`/`Fatal` scritti dai robot, con processo e VM |
+| 5 | Messaggi di errore di un job: il numero mostrato dalla voce 1 oppure la sua Key |
+| 6 | Esporta i job in errore in `mg3orch-job-in-errore-<data>.csv` nella cartella corrente |
+| 7 | Cambia il periodo (default `24h`; es. `12h`, `7d`) |
+| 8 | Aiuto in linea, lo stesso di `mg3orch help` |
+
+Un job è "in errore nel periodo" se è terminato nel periodo con stato `Faulted`. I filtri sono eseguiti da Orchestrator. Nel menu i messaggi non vengono troncati; formato e fuso orario seguono il file di configurazione.
+
+Il menu è pensato per una persona al terminale. Per gli harness e gli script restano i comandi non interattivi: se l'input termina (stdin rediretto e vuoto), il menu esce con 0 senza fare nulla.
 
 ## Configurazione
 
@@ -146,12 +184,14 @@ Le risorse senza elenco (`stats jobs`, `stats sessions`, `queuestats`, `license`
 
 **Opzioni di lettura** (`list`, `count`): `--query/-q`, `--filter`, `--select`, `--orderby`, `--top`, `--skip`, `--expand`, `--since <durata>`. Le opzioni OData vengono inviate così come sono; `--since 24h` filtra sul campo temporale della risorsa.
 
-**Opzioni globali**: `--config/-c <file>` (obbligatoria, salvo per `catalog`, `schema` e `--help`) e `--explain`. Formato dell'output, cartella e tutto il resto stanno nel file di configurazione.
+**Opzioni globali**: `--config/-c <file>` (obbligatoria, salvo per `catalog`, `schema`, `help`, `--help` e il menu) e `--explain`. Formato dell'output, cartella e tutto il resto stanno nel file di configurazione.
 
 **Comandi di servizio**:
 
 | Comando | Scopo |
 |---|---|
+| *(nessuno)* | Apre il [menu interattivo](#menu-interattivo) |
+| `help` | Aiuto in linea: menu, configurazione, comandi principali, query, exit code |
 | `init` | Crea il file di configurazione |
 | `catalog` | Elenca risorse, azioni, campi filtrabili. Funziona anche senza configurazione |
 | `schema` | Manifest JSON dei tool per gli harness IA |
@@ -337,7 +377,7 @@ Garanzie:
 - i retry sono finiti e riguardano solo 408, 429 (rispettando `Retry-After`), 5xx ed errori di rete;
 - anche in caso d'errore `stdout` contiene un output valido nel formato richiesto;
 - nessuna eccezione non gestita raggiunge l'utente: un handler globale la converte in exit code `1`;
-- la CLI non chiede mai input (salvo `init` quando mancano valori), non apre browser e non mostra barre di avanzamento.
+- la CLI non chiede mai input, salvo `init` quando mancano valori e il menu (`mg3orch` senza comandi); non apre browser e non mostra barre di avanzamento.
 
 ## Integrazione con un harness IA
 
@@ -411,7 +451,7 @@ Catena HTTP verso Orchestrator, dall'esterno verso l'interno: `ReadOnlyGuardHand
 
 ```bash
 dotnet build -c Release                                   # 0 errori, 0 warning (TreatWarningsAsErrors)
-dotnet test                                               # 385 test
+dotnet test                                               # 398 test
 dotnet test --settings coverage.runsettings --collect:"XPlat Code Coverage" --results-directory coverage
 reportgenerator -reports:"coverage/**/coverage.cobertura.xml" -targetdir:coverage/report -reporttypes:TextSummary
 dotnet publish src/Mg3.Orchestrator.Cli -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o artifacts/linux-x64
@@ -452,6 +492,7 @@ I riferimenti § sono al [prompt di generazione](docs/PROMPT_GENERAZIONE.md).
 | §2.6 Niente codice dinamico | `Mg3.Orchestrator.Query` (parser proprio); `ParserTests` |
 | §3.1 Un solo file di configurazione, errori con chiave e chiavi ammesse | `ConfigurationTests`, `ExitCodeTests.Exit2InvalidConfiguration`, `ExitCodeTests.Exit2MissingConfiguration` |
 | §3.1 Creazione guidata del file (`init`) | `InitTests` |
+| Menu interattivo e aiuto in linea | `InteractiveMenuTests` |
 | §3.1 Modalità di autenticazione | `AuthTests`, `EndToEndTests.PatAuthenticationSendsTokenWithoutIdentityCall`, `EndToEndTests.LegacyAuthenticationUsesAccountEndpoint` |
 | §3.1 Scope solo `*.Read` | `ValidatorTests.WriteScopesAreRejected`, `ExitCodeTests.Exit2InvalidConfiguration`, `InitTests.ValidatesBeforeWriting` |
 | §3.1 Header della cartella e del tenant | `HandlerTests.FolderHeadersFollowPriority`, `EndToEndTests.FollowsPaginationAndSendsHeaders` |

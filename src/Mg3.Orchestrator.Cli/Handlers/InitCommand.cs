@@ -27,15 +27,22 @@ public static class InitCommand
     public static int Run(CliContext context, InitOptions options)
     {
         ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(options);
         var path = context.ConfigPath ?? throw new ConfigurationException("Indica dove creare il file: mg3orch init --config <percorso>.");
-        var fullPath = Path.IsPathRooted(path) ? path : Path.Combine(context.Environment.WorkingDirectory, path);
+        return Run(context.Environment, options, path);
+    }
+
+    public static int Run(CliEnvironment environment, InitOptions options, string path)
+    {
+        ArgumentNullException.ThrowIfNull(environment);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        var fullPath = Path.IsPathRooted(path) ? path : Path.Combine(environment.WorkingDirectory, path);
         if (File.Exists(fullPath) && !options.Force)
         {
             throw new ConfigurationException($"Il file '{path}' esiste già. Usa --force per sovrascriverlo.");
         }
 
-        var prompt = new Prompter(context.Environment);
+        var prompt = new Prompter(environment);
         var url = OrchestratorUrl.Parse(options.Url ?? prompt.Ask("URL di Orchestrator (puoi incollare quello del browser)", "--url"));
         var file = new ConfigFile
         {
@@ -54,8 +61,8 @@ public static class InitCommand
         }
 
         Write(fullPath, file);
-        context.Environment.Out.WriteLine($"Configurazione scritta in {path}");
-        context.Environment.Out.WriteLine($"Verifica con: mg3orch auth test --config {path}");
+        environment.Out.WriteLine($"Configurazione scritta in {path}");
+        environment.Out.WriteLine($"Verifica con: mg3orch auth test --config {path}");
         return ExitCodes.Success;
     }
 
