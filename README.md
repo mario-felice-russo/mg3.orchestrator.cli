@@ -23,12 +23,11 @@ La CLI non invia mai richieste di scrittura: l'unico verbo HTTP ammesso è `GET`
 8. [Exit code e garanzie di terminazione](#exit-code-e-garanzie-di-terminazione)
 9. [Integrazione con un harness IA](#integrazione-con-un-harness-ia)
 10. [Integrazione in un'applicazione .NET](#integrazione-in-unapplicazione-net)
-11. [Script PowerShell: processi in errore](#script-powershell-processi-in-errore)
-12. [Architettura](#architettura)
-13. [Sviluppo e verifica](#sviluppo-e-verifica)
-14. [Dipendenze](#dipendenze)
-15. [Tracciabilità dei requisiti](#tracciabilità-dei-requisiti)
-16. [Possibili estensioni](#possibili-estensioni)
+11. [Architettura](#architettura)
+12. [Sviluppo e verifica](#sviluppo-e-verifica)
+13. [Dipendenze](#dipendenze)
+14. [Tracciabilità dei requisiti](#tracciabilità-dei-requisiti)
+15. [Possibili estensioni](#possibili-estensioni)
 
 ---
 
@@ -381,33 +380,6 @@ foreach (var row in result.Results[0].Rows) { /* JsonNode */ }
 ```
 
 Il profilo è fisso per il container. In alternativa al file si può costruire direttamente un `Mg3Profile`; in quel caso va validato con `new Mg3ProfileValidator().Validate(null, profile)`.
-
-## Script PowerShell: processi in errore
-
-[`scripts/mg3orch-menu.ps1`](scripts/mg3orch-menu.ps1) apre un menu con le verifiche più frequenti sui processi falliti. Mostra solo i job in errore, con il messaggio d'errore e la VM su cui sono stati eseguiti.
-
-```powershell
-.\scripts\mg3orch-menu.ps1                                   # usa mg3orch.json della cartella corrente o dello script
-.\scripts\mg3orch-menu.ps1 -Config .\mg3orch.json            # ultime 24 ore
-.\scripts\mg3orch-menu.ps1 -Config .\mg3orch.json -Since 7d   # ultimi 7 giorni
-```
-
-| Voce | Cosa mostra |
-|---|---|
-| 1 | Job in errore: ora di fine, processo, VM, messaggio d'errore |
-| 2 | Numero di errori per processo e VM |
-| 3 | Numero di errori per VM |
-| 4 | Messaggi di livello `Error`/`Fatal` scritti dai robot, con processo e VM |
-| 5 | Messaggi di errore di un singolo job (numero dall'elenco della voce 1, oppure la sua Key) |
-| 6 | Esporta i job in errore in un CSV (separatore `;`) nella cartella corrente |
-| 7 | Cambia il periodo (es. `12h`, `7d`) |
-
-Note:
-- Funziona con Windows PowerShell 5.1 e con PowerShell 7.
-- `mg3orch` viene cercato in `-Exe`, accanto allo script, in `artifacts\win-x64` e nel `PATH`; il file di configurazione in `-Config`, poi come `mg3orch.json` nella cartella corrente e in quella dello script.
-- Il file è salvato in UTF-8 con BOM, necessario perché Windows PowerShell 5.1 legga correttamente le lettere accentate. Se lo modifichi, mantieni questa codifica.
-- Per leggere l'output, lo script crea una copia temporanea della configurazione con `"format": "json"` nella cartella temporanea dell'utente e la elimina all'uscita.
-- Un job è "in errore nelle ultime 24 ore" se è terminato (`EndTime`) nel periodo con stato `Faulted`. I filtri vengono eseguiti da Orchestrator, non in memoria.
 
 ## Architettura
 
