@@ -182,7 +182,7 @@ functions  = now() | today() | date(s) | lower(x) | upper(x) | len(x)
 - **Date.** Si usano letterali ISO 8601 e durate come `30m`, `24h`, `7d`. È ammessa l'aritmetica `now() - 7d`.
 - **`matches`.** Usa `Regex` con timeout di 100 ms per espressione.
 - **Pushdown.** Il planner traduce in parametri OData (`$filter`, `$select`, `$orderby`, `$top`, `$skip`, `$expand`) il prefisso più lungo di stadi traducibili su una sorgente diretta. Tutto il resto si esegue in memoria. Il piano risultante si ottiene con `--explain`, che restituisce il piano e non esegue nulla.
-- **Equivalenza del pushdown.** Il risultato con pushdown attivo deve coincidere con quello ottenuto disattivandolo (`--no-pushdown`). Un test parametrico sulle fixture deve dimostrarlo.
+- **Equivalenza del pushdown.** Il risultato con pushdown attivo deve coincidere con quello ottenuto disattivandolo (`BatchOptions.PushdownEnabled = false`). Un test parametrico sulle fixture deve dimostrarlo.
 - **Join.** È un hash join in memoria e rispetta `advanced.maxJoinRows`.
 - **Errori.** Gli errori di parsing riportano posizione, token atteso e token trovato, ed escono con codice `5`.
 
