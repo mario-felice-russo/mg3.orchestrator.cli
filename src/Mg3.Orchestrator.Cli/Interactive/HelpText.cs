@@ -19,17 +19,18 @@ public static class HelpText
           Un job è "in errore nel periodo" se è terminato nel periodo con stato Faulted.
 
         CONFIGURAZIONE
-          Tutto sta in un file JSON. Senza --config si usa mg3orch.json della cartella corrente
-          o di quella del programma; se non esiste, mg3orch lo crea chiedendo i dati (init).
-            mg3orch init --config mg3orch.json --url "<URL copiato dal browser>" --token <PAT>
-            mg3orch auth test --config mg3orch.json
-            mg3orch config validate --config mg3orch.json
+          Tutto sta in un file JSON, uno per ambiente. Il menu senza --config cerca i file oo-*.json
+          nella cartella corrente: uno viene usato, tra più file si sceglie, se non ce ne sono
+          ne crea uno (oo-<ambiente>.json) chiedendo i dati.
+            mg3orch init --config oo-dev.json --url "<URL copiato dal browser>" --token <PAT>
+            mg3orch auth test --config oo-dev.json
+            mg3orch config validate --config oo-dev.json
 
         COMANDI PRINCIPALI
           mg3orch <risorsa> list|get|count [--query "<query>"] --config <file>
-            mg3orch jobs list --since 24h -q "where State == 'Faulted' | select ReleaseName, HostMachineName, Info" -c mg3orch.json
-            mg3orch queues list -c mg3orch.json
-            mg3orch stats jobs -c mg3orch.json
+            mg3orch jobs list --since 24h -q "where State == 'Faulted' | select ReleaseName, HostMachineName, Info" -c oo-dev.json
+            mg3orch queues list -c oo-dev.json
+            mg3orch stats jobs -c oo-dev.json
           mg3orch catalog            elenco delle risorse e dei campi
           mg3orch run --request -    più comandi in una richiesta JSON letta da stdin
           mg3orch <comando> --help   opzioni di un comando

@@ -58,18 +58,21 @@ mg3orch jobs list --since 24h -q "where State == 'Faulted' | select Key, Release
 
 Senza `--token` (o `--client-id`/`--client-secret`), `init` chiede i valori mancanti.
 
-Oppure, più semplicemente, lancia `mg3orch` senza nulla: se manca la configurazione la crea, poi apre il [menu](#menu-interattivo).
+Oppure, più semplicemente, lancia `mg3orch` senza nulla nella cartella dei tuoi file `oo-*.json`: se non ce ne sono, ne crea uno, poi apre il [menu](#menu-interattivo).
 
 ## Menu interattivo
 
 `mg3orch` lanciato **senza comandi** apre un menu per le verifiche più frequenti sui processi in errore:
 
-1. se non trova la configurazione (`--config`, oppure `mg3orch.json` nella cartella corrente o in quella del programma), esegue `init` e chiede URL e credenziali;
+1. senza `--config` cerca nella cartella da cui lo lanci i file `oo-*.json` (uno per ambiente, ad esempio `oo-dev.json` e `oo-prod.json`):
+   - se ne trova uno, usa quello;
+   - se ne trova più di uno, chiede quale usare;
+   - se non ne trova, chiede il nome dell'ambiente (default `dev`), poi esegue `init` e crea `oo-<nome>.json`;
 2. poi mostra il menu e lo ripropone dopo ogni scelta, finché non scegli `0`.
 
 ```
 === mg3orch - processi in errore (ultime 24h) ===
-    Configurazione: D:\Mr\Publish\mg3orch.json
+    Configurazione: oo-dev.json
   1) Job in errore: messaggio e VM
   2) Riepilogo per processo e VM
   3) Riepilogo per VM

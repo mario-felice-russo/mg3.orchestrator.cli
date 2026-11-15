@@ -9,4 +9,5 @@ coverage/
 .idea/
 # File di configurazione: contengono il token.
 mg3orch*.json
+oo-*.json
 !mg3orch.sample.json
