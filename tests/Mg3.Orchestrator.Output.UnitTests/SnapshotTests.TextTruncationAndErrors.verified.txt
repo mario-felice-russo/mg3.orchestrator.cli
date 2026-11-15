@@ -13,4 +13,4 @@ Id    Key           State    ReleaseName  ReleaseVersionId  HostMachineName  Sou
 [troncato: mostrate 2 righe; altri dati oltre i limiti (limits.maxItems/maxPages o timeout) — usa filtri più stretti]
 
 ## rotto
-ERRORE [4]: Risorsa non trovata (404)
+ERRORE (4 – accesso negato o risorsa non trovata): Risorsa non trovata (404)

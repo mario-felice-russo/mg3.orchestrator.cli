@@ -45,63 +45,90 @@ Per Windows e macOS sostituire `linux-x64` con `win-x64` oppure `osx-arm64`. In 
 ## Avvio rapido
 
 ```bash
-cp mg3orch.sample.json mg3orch.json          # poi modificare baseUrl, cartella e credenziali
-export UIPATH_CLIENT_ID=...  UIPATH_CLIENT_SECRET=...
+# 1. Crea il file di configurazione: incolla l'URL di Orchestrator copiato dal browser
+mg3orch init --config ~/mg3orch/dev.json --url "https://cloud.uipath.com/<org>/<tenant>/orchestrator_/jobs?fid=123456" --token <PAT>
 
-mg3orch config validate                       # controlla la configurazione (segreti mascherati)
-mg3orch auth test                             # ottiene un token e chiama Orchestrator
-mg3orch jobs list --since 24h -q "where State == 'Faulted' | select Key, ReleaseName, Info"
-mg3orch stats jobs -o json
+# 2. Verifica
+mg3orch auth test --config ~/mg3orch/dev.json
+
+# 3. Usa
+mg3orch jobs list --since 24h -q "where State == 'Faulted' | select Key, ReleaseName, Info" --config ~/mg3orch/dev.json
 ```
+
+Senza `--token` (o `--client-id`/`--client-secret`), `init` chiede i valori mancanti.
 
 ## Configurazione
 
-### Strati
+Tutta la configurazione sta in **un solo file JSON**, indicato con `--config <percorso>` (o `-c`). Non ci sono variabili d'ambiente, profili né opzioni da riga di comando che la sovrascrivono. Per un altro ambiente si usa un altro file, ad esempio `dev.json` e `prod.json`.
 
-La configurazione effettiva si ottiene fondendo quattro strati, dal meno al più prioritario:
+Il file più piccolo possibile:
 
-1. **file JSON**: `--config <path>`, altrimenti la variabile `MG3ORCH_CONFIG`, altrimenti `./mg3orch.json`;
-2. **variabili d'ambiente** nella forma `MG3ORCH__<Sezione>__<Chiave>`, ad esempio `MG3ORCH__Output__Format=json`;
-3. **opzioni da riga di comando**: `--folder`, `--output`, `--text-style`, `--envelope`;
-4. **blocco `config` della richiesta batch** (vedi [Richiesta batch](#richiesta-batch)).
-
-Il file può contenere più **profili** sotto `profiles`; si sceglie quale usare con `--profile`, con `MG3ORCH_PROFILE` o con `config.profile` nella richiesta batch. Il profilo predefinito è `default`. Un file senza `profiles` viene trattato come un unico profilo.
-
-Le chiavi non distinguono maiuscole e minuscole. Una chiave sconosciuta o un valore del tipo sbagliato producono un errore che indica la chiave (exit code `2`). Un esempio completo è in [`mg3orch.sample.json`](mg3orch.sample.json).
+```json
+{
+  "url": "https://cloud.uipath.com/<org>/<tenant>/orchestrator_/",
+  "folderId": 123456,
+  "token": "<Personal Access Token>"
+}
+```
 
 ### Chiavi
 
+| Chiave | Obbligatoria | Significato |
+|---|---|---|
+| `url` | sì | URL di Orchestrator. Cloud: `https://cloud.uipath.com/<org>/<tenant>/orchestrator_/` |
+| `folderId` **oppure** `folderPath` **oppure** `folderKey` | per le risorse legate a una cartella | Cartella: id (il valore `fid` nell'URL del browser), percorso (`Shared/Finance`) o GUID |
+| `token` | una delle tre credenziali | Personal Access Token |
+| `clientId` + `clientSecret` + `scopes` | una delle tre credenziali | Applicazione esterna (confidential). `scopes`: solo scope `*.Read`, separati da spazi |
+| `username` + `password` | una delle tre credenziali | Autenticazione legacy, solo on‑prem |
+| `identityUrl` | no | Endpoint del token. Default: `https://<host>/identity_/connect/token` in cloud, `https://<host>/identity/connect/token` on‑prem |
+| `tenantName` | no | Tenant on‑prem |
+| `format` | no | `text` (default) oppure `json` |
+| `style` | no | Stile del testo: `table` (default), `list`, `markdown`, `csv` |
+| `advanced` | no | Impostazioni facoltative, vedi sotto |
+
+La modalità di autenticazione si ricava dalle credenziali presenti: `token`, oppure `clientId`/`clientSecret`, oppure `username`/`password`. Indicarne più di un tipo è un errore.
+
+### Sezione `advanced`
+
 | Chiave | Default | Significato |
 |---|---|---|
-| `orchestrator.baseUrl` | — | URL di Orchestrator. Cloud: `https://cloud.uipath.com/{org}/{tenant}/orchestrator_/` |
-| `orchestrator.tenantName` | — | Tenant on‑prem; inviato come `X-UIPATH-TenantName` |
-| `orchestrator.folder.id` / `.key` / `.path` | — | Cartella. Priorità: id → key → path |
-| `auth.mode` | `ClientCredentials` | `ClientCredentials`, `Pat` oppure `Legacy` |
-| `auth.identityUrl` | — | Endpoint del token per `ClientCredentials` (cloud: `https://cloud.uipath.com/identity_/connect/token`) |
-| `auth.clientId`, `auth.clientSecret` | — | Credenziali dell'applicazione esterna |
-| `auth.scopes` | — | Scope separati da spazi; **solo** scope `*.Read` |
-| `auth.token` | — | Personal Access Token (`Pat`) |
-| `auth.username`, `auth.password` | — | Credenziali `Legacy` (on‑prem, `api/Account/Authenticate`) |
-| `auth.tokenCache` / `auth.tokenCachePath` | `Memory` | `Disk` attiva una cache su file con permessi `600` (default `~/.mg3orch/token-cache.json`) |
-| `http.timeoutSeconds` | 30 | Timeout di ogni tentativo HTTP |
-| `http.maxRetries` | 3 | Tentativi aggiuntivi su 408, 429, 5xx ed errori di rete |
-| `http.retryBaseDelayMs` | 500 | Attesa base del backoff esponenziale con jitter |
-| `http.pageSize` | 500 | Elementi per pagina (`$top`), massimo 1000 |
-| `limits.maxItems` | 1000 | Elementi massimi letti per comando |
-| `limits.maxPages` | 50 | Pagine massime lette per comando |
-| `limits.globalTimeoutSeconds` | 120 | Durata massima dell'intera esecuzione, retry compresi |
-| `limits.maxJoinRows` | 100000 | Righe massime prodotte da un join |
-| `output.format` | `text` | `text` oppure `json` |
-| `output.textStyle` | `table` | `table`, `list`, `markdown` oppure `csv` |
-| `output.envelope` | `false` | Incapsula ogni risultato con metadati |
-| `output.maxRows` | 200 | Righe mostrate in testo (il JSON non viene troncato) |
-| `output.maxCellWidth` | 80 | Larghezza massima di una cella in testo |
-| `output.timeZone` | `UTC` | Fuso orario delle date nel testo |
-| `output.culture` | `it-IT` | Formato dei numeri nel testo (`csv` usa sempre la cultura invariante) |
+| `envelope` | `false` | Incapsula ogni risultato JSON con metadati |
+| `maxRows` | 200 | Righe mostrate in testo (il JSON non viene troncato) |
+| `maxCellWidth` | 80 | Larghezza massima di una cella in testo |
+| `timeZone` | `UTC` | Fuso orario delle date nel testo |
+| `culture` | `it-IT` | Formato dei numeri nel testo (`csv` usa sempre la cultura invariante) |
+| `timeoutSeconds` | 30 | Timeout di ogni tentativo HTTP |
+| `maxRetries` | 3 | Tentativi aggiuntivi su 408, 429, 5xx ed errori di rete |
+| `retryBaseDelayMs` | 500 | Attesa base del backoff esponenziale con jitter |
+| `pageSize` | 500 | Elementi per pagina (`$top`), massimo 1000 |
+| `maxItems` | 1000 | Elementi massimi letti per comando |
+| `maxPages` | 50 | Pagine massime lette per comando |
+| `globalTimeoutSeconds` | 120 | Durata massima dell'intera esecuzione, retry compresi |
+| `maxJoinRows` | 100000 | Righe massime prodotte da un join |
+| `tokenCache` / `tokenCachePath` | `memory` | `disk` attiva una cache su file con permessi `600` (default `~/.mg3orch/token-cache.json`) |
+| `verbosity` | `normal` | `quiet` (nulla su stderr), `normal` (solo avvisi), `detailed`, `diagnostic` (anche le URL chiamate) |
+
+Le chiavi non distinguono maiuscole e minuscole e il file ammette commenti `//`. Una chiave sconosciuta o un valore sbagliato producono un errore che indica la chiave e l'elenco di quelle ammesse (exit code `2`). Un esempio è in [`mg3orch.sample.json`](mg3orch.sample.json).
+
+### `mg3orch init`
+
+Crea il file e lo valida prima di scriverlo, con permessi `600`.
+
+| Opzione | Significato |
+|---|---|
+| `--config <percorso>` | Dove scrivere il file (obbligatoria) |
+| `--url <url>` | URL di Orchestrator; va bene quello copiato dal browser: organizzazione, tenant e cartella (`fid`) vengono ricavati |
+| `--token` | Personal Access Token |
+| `--client-id`, `--client-secret`, `--scopes` | Applicazione esterna (`--scopes` ha un default di sola lettura) |
+| `--username`, `--password`, `--tenant` | On‑prem legacy |
+| `--folder-id`, `--folder-path` | Cartella, se non è nell'URL |
+| `--force` | Sovrascrive un file esistente |
+
+I valori mancanti vengono chiesti uno alla volta. È l'unico comando che fa domande: con tutte le opzioni funziona senza interazione.
 
 ### Segreti
 
-Un valore nella forma `env:NOME` viene letto dalla variabile d'ambiente `NOME`; un valore nella forma `file:percorso` dal contenuto del file indicato. I segreti (`clientSecret`, `token`, `password`) non compaiono mai in output, log o messaggi d'errore: `config validate` li mostra come `***`.
+Token, secret e password stanno nel file. Proteggilo come una password: `init` lo crea leggibile solo dal proprietario, e il file non va messo sotto controllo di versione. I segreti non compaiono mai in output o nei log: `config validate` li mostra come `***`.
 
 ## Comandi
 
@@ -119,12 +146,13 @@ Le risorse senza elenco (`stats jobs`, `stats sessions`, `queuestats`, `license`
 
 **Opzioni di lettura** (`list`, `count`): `--query/-q`, `--filter`, `--select`, `--orderby`, `--top`, `--skip`, `--expand`, `--since <durata>`. Le opzioni OData vengono inviate così come sono; `--since 24h` filtra sul campo temporale della risorsa.
 
-**Opzioni globali**: `--config`, `--profile`, `--folder`, `--output/-o`, `--text-style`, `--envelope`, `--verbosity quiet|normal|detailed|diagnostic`, `--explain`, `--no-pushdown`.
+**Opzioni globali**: `--config/-c <file>` (obbligatoria, salvo per `catalog`, `schema` e `--help`) e `--explain`. Formato dell'output, cartella e tutto il resto stanno nel file di configurazione.
 
 **Comandi di servizio**:
 
 | Comando | Scopo |
 |---|---|
+| `init` | Crea il file di configurazione |
 | `catalog` | Elenca risorse, azioni, campi filtrabili. Funziona anche senza configurazione |
 | `schema` | Manifest JSON dei tool per gli harness IA |
 | `config validate` | Valida e stampa la configurazione con i segreti mascherati |
@@ -198,7 +226,7 @@ Il planner traduce in `$filter`, `$orderby`, `$skip`, `$top` e `$select` il **pr
 - un `where` dopo `take`/`skip` o dopo `select` non viene tradotto, perché cambierebbe il significato;
 - un `select` si traduce solo se elenca campi di primo livello senza alias.
 
-`--explain` mostra il piano senza eseguire nulla; `--no-pushdown` esegue tutto in memoria.
+`--explain` mostra il piano senza contattare Orchestrator.
 
 ### Esempi
 
@@ -224,15 +252,15 @@ Il planner traduce in `$filter`, `$orderby`, `$skip`, `$top` e `$select` il **pr
 
 ## Output
 
-### `--output json`
+### `"format": "json"`
 
 - **Senza stadi in memoria**: il payload originale di Orchestrator. Le pagine vengono unite in un unico `value`; campi e valori restano invariati. Il JSON è compatto e con escaping minimo.
 - **Con stadi in memoria**: la stessa struttura (`@odata.context`, `@odata.count`, `value`) con le righe trasformate; i nomi dei campi originali restano invariati.
 - **Batch**: un oggetto `{ "<id>": <payload> }` nell'ordine della richiesta.
-- **`--envelope`**: ogni payload è incapsulato in `{ command, status, durationMs, pages, truncated, pushdown, warnings, error, data }`. Lo schema è pubblicato da `mg3orch schema`. `durationMs` è l'unico campo non deterministico.
-- **Errore**: `{ "error": { "code", "exitCode", "message", "commandId" } }`.
+- **`"advanced": { "envelope": true }`**: ogni payload è incapsulato in `{ command, status, durationMs, pages, truncated, pushdown, warnings, error, data }`. Lo schema è pubblicato da `mg3orch schema`. `durationMs` è l'unico campo non deterministico.
+- **Errore**: `{ "error": { "code", "exitCode", "meaning", "message", "commandId" } }`.
 
-### `--output text`
+### `"format": "text"`
 
 ```
 ## jobs list — 37 righe
@@ -244,19 +272,33 @@ Id    State    ReleaseName  StartTime
 ```
 
 - Stili: `table`, `list` (`chiave: valore`), `markdown`, `csv` (RFC 4180, cultura invariante, senza intestazione di sezione).
-- Le date sono convertite in `output.timeZone`; le celle oltre `maxCellWidth` terminano con `…`.
+- Le date sono convertite in `advanced.timeZone`; le celle oltre `maxCellWidth` terminano con `…`.
 - L'output è deterministico e non contiene colori né sequenze di controllo.
-- Gli errori diventano `ERRORE [exit code]: messaggio`.
+- Gli errori diventano una sola riga: `ERRORE (exit code – significato): messaggio`.
 
-`stdout` contiene solo il risultato. Avvisi, errori dettagliati e log vanno su `stderr`.
+`stdout` contiene solo il risultato, oppure l'errore. Gli avvisi vanno su `stderr`; i log solo con `verbosity` `detailed` o `diagnostic`.
+
+### Errori d'uso
+
+Ogni errore indica cosa non va e, quando possibile, il comando corretto:
+
+```
+$ mg3orch --auth test
+ERRORE (2 – uso o configurazione non validi): '--auth' non è un'opzione valida per 'mg3orch'. Forse intendevi: mg3orch auth test
+
+$ mg3orch jobs
+ERRORE (2 – uso o configurazione non validi): 'mg3orch jobs' richiede un sottocomando: list, count, get. Usa 'mg3orch jobs --help' per l'elenco.
+
+$ mg3orch auth test
+ERRORE (2 – uso o configurazione non validi): Manca il file di configurazione: aggiungi --config <percorso>. Per crearlo: mg3orch init --config <percorso>.
+```
 
 ## Richiesta batch
 
-`mg3orch run --request <file|->` legge la richiesta da un file o da `stdin`:
+`mg3orch run --request <file|-> --config <file>` legge la richiesta da un file o da `stdin`. Configurazione e formato dell'output vengono dal file indicato con `--config`.
 
 ```json
 {
-  "config": { "profile": "default", "output": { "format": "json" } },
   "commands": [
     { "id": "rel",    "command": "releases list" },
     { "id": "faults", "command": "jobs list", "args": { "since": "24h" },
@@ -270,7 +312,7 @@ Id    State    ReleaseName  StartTime
 - `id` è obbligatorio e univoco. Un comando usa il risultato di un altro con `from $id` o `join $id as alias`.
 - Le dipendenze formano un grafo aciclico, validato prima dell'esecuzione (un ciclo produce exit code `2`).
 - I comandi indipendenti girano in parallelo fino a `parallelism` (1–64). I risultati escono sempre nell'ordine della richiesta.
-- `args` accetta `folder`, `filter`, `select`, `orderby`, `top`, `skip`, `expand`, `since`, `key`.
+- `args` accetta `folder` (sostituisce la cartella del file solo per quel comando), `filter`, `select`, `orderby`, `top`, `skip`, `expand`, `since`, `key`.
 - Con `stopOnError: true` il primo errore interrompe gli altri comandi, che risultano `skipped`. Un comando la cui dipendenza fallisce risulta sempre `skipped`.
 
 ## Exit code e garanzie di terminazione
@@ -290,25 +332,26 @@ Id    State    ReleaseName  StartTime
 
 Garanzie:
 
-- nessuna esecuzione supera `limits.globalTimeoutSeconds`, retry compresi. Allo scadere escono i risultati parziali con `truncated = true` ed exit code `6`;
+- nessuna esecuzione supera `advanced.globalTimeoutSeconds`, retry compresi. Allo scadere escono i risultati parziali con `truncated = true` ed exit code `6`;
 - `maxItems`, `maxPages` e `maxJoinRows` rendono finite paginazione e join; il loro superamento è segnalato come troncamento, non come errore;
 - i retry sono finiti e riguardano solo 408, 429 (rispettando `Retry-After`), 5xx ed errori di rete;
 - anche in caso d'errore `stdout` contiene un output valido nel formato richiesto;
 - nessuna eccezione non gestita raggiunge l'utente: un handler globale la converte in exit code `1`;
-- la CLI non chiede mai input, non apre browser e non mostra barre di avanzamento.
+- la CLI non chiede mai input (salvo `init` quando mancano valori), non apre browser e non mostra barre di avanzamento.
 
 ## Integrazione con un harness IA
 
 1. Generare il manifest dei tool: `mg3orch schema > mg3orch.tools.json`. Contiene un tool per comando (`jobs_list`, `jobs_get`, `stats_jobs`, `odata_get`, `run`…) con descrizione e JSON Schema dei parametri, la tabella degli exit code e lo schema dell'envelope.
-2. Registrare i tool nell'harness. Ogni invocazione diventa una riga di comando, ad esempio `mg3orch jobs list --query "<query>" --output text`.
-3. Per più domande in una volta usare `run` con la richiesta su `stdin`:
+2. Preparare un file di configurazione per l'harness, ad esempio con `"format": "json"`, `"advanced": { "envelope": true, "verbosity": "quiet" }`.
+3. Registrare i tool nell'harness. Ogni invocazione diventa una riga di comando, ad esempio `mg3orch jobs list --query "<query>" --config harness.json`.
+4. Per più domande in una volta usare `run` con la richiesta su `stdin`:
 
 ```bash
 echo '{ "commands": [ { "id": "f", "command": "jobs list", "args": { "since": "24h" }, "query": "where State == '"'"'Faulted'"'"' | count" } ] }' \
-  | mg3orch run --request - --output json --envelope --verbosity quiet
+  | mg3orch run --request - --config harness.json
 ```
 
-Consigli: `--output text` è il formato più economico in token; `--envelope` dà all'agente `truncated` e `warnings` per decidere se affinare la query; l'exit code va sempre controllato.
+Consigli: `"format": "text"` è il formato più economico in token; l'envelope dà all'agente `truncated` e `warnings` per decidere se affinare la query; l'exit code va sempre controllato.
 
 ## Integrazione in un'applicazione .NET
 
@@ -318,13 +361,11 @@ Come processo esterno, si leggono `stdout` (JSON) e l'exit code. Come libreria, 
 using Mg3.Orchestrator.Abstractions.Configuration;
 using Mg3.Orchestrator.Abstractions.Execution;
 using Mg3.Orchestrator.Core;
+using Mg3.Orchestrator.Infrastructure.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-var profile = new Mg3Profile
-{
-    Orchestrator = new OrchestratorSettings { BaseUrl = "https://cloud.uipath.com/org/tenant/orchestrator_/", Folder = new FolderSettings { Path = "Shared" } },
-    Auth = new AuthSettings { Mode = AuthMode.Pat, Token = Environment.GetEnvironmentVariable("UIPATH_PAT") },
-};
+// Stesso file usato dalla CLI: lo carica, ricava i default e lo valida.
+var profile = new ConfigFileLoader().Load("dev.json", AppContext.BaseDirectory);
 
 await using var provider = new ServiceCollection().AddMg3Orchestrator(profile).BuildServiceProvider();
 var service = provider.GetRequiredService<IOrchestratorQueryService>();
@@ -338,7 +379,7 @@ var result = await service.ExecuteAsync(request, CancellationToken.None);
 foreach (var row in result.Results[0].Rows) { /* JsonNode */ }
 ```
 
-In modalità libreria il profilo è fisso per il container: il blocco `config` di `BatchRequest` è usato solo dalla CLI. Il profilo non viene validato automaticamente e i riferimenti `env:`/`file:` non vengono risolti. Per ottenere lo stesso comportamento della CLI si carica il profilo con `new ProfileLoader().Load(...)` (namespace `Mg3.Orchestrator.Infrastructure.Configuration`), che fonde gli strati, risolve i segreti e valida.
+Il profilo è fisso per il container. In alternativa al file si può costruire direttamente un `Mg3Profile`; in quel caso va validato con `new Mg3ProfileValidator().Validate(null, profile)`.
 
 ## Architettura
 
@@ -370,13 +411,13 @@ Catena HTTP verso Orchestrator, dall'esterno verso l'interno: `ReadOnlyGuardHand
 
 ```bash
 dotnet build -c Release                                   # 0 errori, 0 warning (TreatWarningsAsErrors)
-dotnet test                                               # 354 test
+dotnet test                                               # 385 test
 dotnet test --settings coverage.runsettings --collect:"XPlat Code Coverage" --results-directory coverage
 reportgenerator -reports:"coverage/**/coverage.cobertura.xml" -targetdir:coverage/report -reporttypes:TextSummary
 dotnet publish src/Mg3.Orchestrator.Cli -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o artifacts/linux-x64
 ```
 
-Copertura misurata (righe, codice generato dal compilatore escluso): Query 96,9 %, Core 99,3 %, Output 98,4 %.
+Copertura misurata (righe, codice generato dal compilatore escluso): Query 96,3 %, Core 99,5 %, Output 98,9 %.
 
 La pipeline [CI](.github/workflows/ci.yml) esegue gli stessi passi su ogni pull request e su ogni push su `main`. Ricompila con 0 warning, esegue i test, pubblica il riepilogo della copertura e fallisce sotto l'85 % su Query, Core e Output (controllo in [`build/check-coverage.py`](build/check-coverage.py)). Produce infine gli eseguibili `linux-x64`, `win-x64` e `osx-arm64` come artifact.
 
@@ -390,7 +431,7 @@ Gli snapshot dei formatter sono in `tests/Mg3.Orchestrator.Output.UnitTests/*.ve
 | `Microsoft.Extensions.DependencyInjection` | Composition root e registrazione delle strategie (principio O) |
 | `Microsoft.Extensions.Http` | `IHttpClientFactory` e catena di `DelegatingHandler` |
 | `Microsoft.Extensions.Http.Resilience` | Retry con backoff e jitter, rispetto di `Retry-After`, circuit breaker, timeout per tentativo |
-| `Microsoft.Extensions.Logging(.Console)` | Log su `stderr` regolati da `--verbosity` |
+| `Microsoft.Extensions.Logging(.Console)` | Log su `stderr` regolati da `advanced.verbosity` |
 | `Microsoft.Extensions.Options` | `IValidateOptions<T>` per la validazione del profilo |
 | `xunit`, `Shouldly` | Test (Shouldly al posto di FluentAssertions, che dalla v8 ha licenza commerciale) |
 | `Verify.Xunit` | Snapshot test dei formatter |
@@ -409,13 +450,14 @@ I riferimenti § sono al [prompt di generazione](docs/PROMPT_GENERAZIONE.md).
 | §2.4 Nessun segreto in uscita | `ExitCodeTests.Exit3AuthenticationFailed`, `EndToEndTests.CatalogSchemaAndConfigCommands` |
 | §2.5 SOLID | [Architettura](#architettura) |
 | §2.6 Niente codice dinamico | `Mg3.Orchestrator.Query` (parser proprio); `ParserTests` |
-| §3.1 Strati, profili, chiavi case-insensitive, errori con chiave | `ConfigurationTests` |
+| §3.1 Un solo file di configurazione, errori con chiave e chiavi ammesse | `ConfigurationTests`, `ExitCodeTests.Exit2InvalidConfiguration`, `ExitCodeTests.Exit2MissingConfiguration` |
+| §3.1 Creazione guidata del file (`init`) | `InitTests` |
 | §3.1 Modalità di autenticazione | `AuthTests`, `EndToEndTests.PatAuthenticationSendsTokenWithoutIdentityCall`, `EndToEndTests.LegacyAuthenticationUsesAccountEndpoint` |
-| §3.1 Scope solo `*.Read` | `ValidatorTests.WriteScopesAreRejected`, `ExitCodeTests.Exit2InvalidConfiguration` |
-| §3.1 Segreti `env:` / `file:` | `ConfigurationTests.LoadsDefaultFileAndResolvesSecrets`, `ConfigurationTests.ProfileSelectionPrefersRequestThenCliThenEnvironment` |
+| §3.1 Scope solo `*.Read` | `ValidatorTests.WriteScopesAreRejected`, `ExitCodeTests.Exit2InvalidConfiguration`, `InitTests.ValidatesBeforeWriting` |
 | §3.1 Header della cartella e del tenant | `HandlerTests.FolderHeadersFollowPriority`, `EndToEndTests.FollowsPaginationAndSendsHeaders` |
 | §3.1 Cache del token (memoria, disco `600`) | `AuthTests.TokenProviderCachesUntilExpiry`, `AuthTests.FileTokenCachePersistsWithPrivatePermissions` |
 | §3.2 Comandi singoli e opzioni | `CommandResolverTests`, `EndToEndTests.ResourceCommandsCoverOptionsAndActions` |
+| §3.2 Errori d'uso chiari con suggerimento | `ExitCodeTests.Exit2ExplainsUsageErrors` |
 | §3.2 Comandi di servizio | `EndToEndTests.CatalogSchemaAndConfigCommands`, `EndToEndTests.AuthTestChecksTokenAndFolders`, `EndToEndTests.ODataGetReadsArbitraryPaths` |
 | §3.3 Batch, DAG, parallelismo, ordine dei risultati | `BatchTests`, `QueryServiceTests.ReferencesAndJoinsUseOtherResults`, `EndToEndTests.BatchWithDependenciesAndTextOutput` |
 | §4 Catalogo e schema aperto | `EndToEndTests.CatalogSchemaAndConfigCommands`; [ASSUMPTIONS.md](ASSUMPTIONS.md) |

@@ -16,15 +16,15 @@ public sealed class ValidatorTests
         var profile = Profiles.Valid() with { Auth = Profiles.Valid().Auth with { Scopes = "OR.Jobs.Read OR.Jobs.Write OR.Execution" } };
         Errors(profile).ShouldBe(
         [
-            "[auth.scopes] lo scope 'OR.Jobs.Write' non è di sola lettura: sono ammessi solo scope '*.Read'.",
-            "[auth.scopes] lo scope 'OR.Execution' non è di sola lettura: sono ammessi solo scope '*.Read'.",
+            "[scopes] lo scope 'OR.Jobs.Write' non è di sola lettura: sono ammessi solo scope '*.Read'.",
+            "[scopes] lo scope 'OR.Execution' non è di sola lettura: sono ammessi solo scope '*.Read'.",
         ]);
     }
 
     [Theory]
-    [InlineData(AuthMode.ClientCredentials, "[auth.identityUrl]")]
-    [InlineData(AuthMode.Pat, "[auth.token]")]
-    [InlineData(AuthMode.Legacy, "[auth.username]")]
+    [InlineData(AuthMode.ClientCredentials, "[identityUrl]")]
+    [InlineData(AuthMode.Pat, "[token]")]
+    [InlineData(AuthMode.Legacy, "[username]")]
     public void RequiresCredentialsForMode(AuthMode mode, string key)
     {
         var profile = Profiles.Valid() with { Auth = new AuthSettings { Mode = mode } };
@@ -45,9 +45,9 @@ public sealed class ValidatorTests
         var errors = Errors(profile).ToList();
         foreach (var key in new[]
         {
-            "orchestrator.baseUrl", "orchestrator.folder.path", "orchestrator.folder.key", "auth.identityUrl", "http.timeoutSeconds", "http.pageSize",
-            "http.maxRetries", "http.retryBaseDelayMs", "limits.maxItems", "limits.maxPages", "limits.globalTimeoutSeconds", "limits.maxJoinRows",
-            "output.timeZone", "output.culture", "output.maxRows", "output.maxCellWidth",
+            "url", "folderPath", "folderKey", "identityUrl", "advanced.timeoutSeconds", "advanced.pageSize",
+            "advanced.maxRetries", "advanced.retryBaseDelayMs", "advanced.maxItems", "advanced.maxPages", "advanced.globalTimeoutSeconds", "advanced.maxJoinRows",
+            "advanced.timeZone", "advanced.culture", "advanced.maxRows", "advanced.maxCellWidth",
         })
         {
             errors.ShouldContain(e => e.StartsWith($"[{key}]", StringComparison.Ordinal), key);

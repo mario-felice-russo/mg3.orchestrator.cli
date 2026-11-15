@@ -8,6 +8,16 @@ public sealed record Mg3Profile
     public HttpSettings Http { get; init; } = new();
     public LimitsSettings Limits { get; init; } = new();
     public OutputSettings Output { get; init; } = new();
+    public LogVerbosity Verbosity { get; init; } = LogVerbosity.Normal;
+}
+
+/// <summary>Quantità di diagnostica su stderr: quiet (nulla), normal (solo avvisi), detailed, diagnostic.</summary>
+public enum LogVerbosity
+{
+    Quiet,
+    Normal,
+    Detailed,
+    Diagnostic,
 }
 
 public sealed record OrchestratorSettings
@@ -23,6 +33,7 @@ public sealed record FolderSettings
     public long? Id { get; init; }
     public string? Key { get; init; }
 
+    [System.Text.Json.Serialization.JsonIgnore]
     public bool IsEmpty => Id is null && string.IsNullOrWhiteSpace(Key) && string.IsNullOrWhiteSpace(Path);
 
     /// <summary>Interpreta un valore libero: numero → id, GUID → key, altrimenti percorso.</summary>

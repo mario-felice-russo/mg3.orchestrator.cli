@@ -23,7 +23,7 @@ public sealed class JsonOutputTests
     public void SingleErrorIsWrittenAsErrorObject()
     {
         var result = new CommandResult { Id = "cmd", Command = "x", Status = CommandStatus.Error, Error = new ErrorInfo(5, "query_error", "msg", "cmd") };
-        OutputHost.Write(OutputHost.Json, OutputHost.One(result), new OutputSettings()).ShouldBe("{\"error\":{\"code\":\"query_error\",\"exitCode\":5,\"message\":\"msg\",\"commandId\":\"cmd\"}}\n");
+        OutputHost.Write(OutputHost.Json, OutputHost.One(result), new OutputSettings()).ShouldBe("{\"error\":{\"code\":\"query_error\",\"exitCode\":5,\"meaning\":\"errore nella query\",\"message\":\"msg\",\"commandId\":\"cmd\"}}\n");
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public sealed class JsonOutputTests
         JsonNode.Parse(json.ToString())!["error"]!["exitCode"]!.GetValue<int>().ShouldBe(2);
         using var text = new StringWriter();
         OutputHost.Text.WriteError(text, info, new OutputSettings());
-        text.ToString().TrimEnd().ShouldBe("ERRORE [2]: Configurazione non valida");
+        text.ToString().TrimEnd().ShouldBe("ERRORE (2 – uso o configurazione non validi): Configurazione non valida");
     }
 
     [Fact]

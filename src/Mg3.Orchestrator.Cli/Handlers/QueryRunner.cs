@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using Mg3.Orchestrator.Abstractions.Errors;
 using Mg3.Orchestrator.Abstractions.Execution;
 using Mg3.Orchestrator.Cli.Hosting;
@@ -13,17 +12,17 @@ public static class QueryRunner
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(request);
-        var profile = context.LoadProfile(request.Config);
-        await using var services = context.BuildServices(profile);
+        var profile = context.LoadProfile();
+        await using var services = CliContext.BuildServices(profile);
         var service = services.GetRequiredService<IOrchestratorQueryService>();
         try
         {
             var result = await service.ExecuteAsync(request, cancellationToken).ConfigureAwait(false);
-            return context.WriteResult(services, result, profile.Output);
+            return context.WriteResult(services, result, profile);
         }
         catch (Mg3Exception ex)
         {
-            return context.WriteError(ex, profile.Output);
+            return context.WriteError(ex);
         }
     }
 
@@ -35,6 +34,4 @@ public static class QueryRunner
 
     public static Dictionary<string, string> Args(params (string Name, string? Value)[] values) =>
         values.Where(v => v.Value is not null).ToDictionary(v => v.Name, v => v.Value!, StringComparer.OrdinalIgnoreCase);
-
-    public static JsonObject? EmptyToNull(JsonObject? value) => value is { Count: > 0 } ? value : null;
 }

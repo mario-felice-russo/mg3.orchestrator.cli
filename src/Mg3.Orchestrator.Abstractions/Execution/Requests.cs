@@ -1,5 +1,3 @@
-using System.Text.Json.Nodes;
-
 namespace Mg3.Orchestrator.Abstractions.Execution;
 
 /// <summary>Singolo comando della richiesta.</summary>
@@ -15,4 +13,4 @@ public sealed record BatchOptions
     public bool ExplainOnly { get; init; }
 }
 
-public sealed record BatchRequest(IReadOnlyList<CommandRequest> Commands, BatchOptions Options, bool IsBatch, JsonObject? Config = null);
+public sealed record BatchRequest(IReadOnlyList<CommandRequest> Commands, BatchOptions Options, bool IsBatch);

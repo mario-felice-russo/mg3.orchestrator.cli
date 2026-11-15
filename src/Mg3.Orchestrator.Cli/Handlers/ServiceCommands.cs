@@ -20,8 +20,8 @@ public static class ServiceCommands
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(catalog);
-        var profile = LenientProfile(context);
-        using var services = context.BuildServices(profile);
+        var profile = context.LenientProfile();
+        using var services = CliContext.BuildServices(profile);
         var payload = new JsonArray(catalog.All.Select(Describe).ToArray());
         var rows = catalog.All.Select(r => (JsonNode?)new JsonObject
         {
@@ -34,7 +34,7 @@ public static class ServiceCommands
             ["verified"] = r.Verified,
             ["filterable"] = string.Join(", ", r.Fields.Where(f => f.Filterable).Select(f => f.Name)),
         }).ToArray();
-        return context.WriteResult(services, Single("catalog", payload, rows), profile.Output);
+        return context.WriteResult(services, Single("catalog", payload, rows), profile);
     }
 
     public static int Schema(CliContext context, IResourceCatalog catalog)
@@ -48,17 +48,17 @@ public static class ServiceCommands
     {
         ArgumentNullException.ThrowIfNull(context);
         var profile = context.LoadProfile();
-        using var services = context.BuildServices(profile);
-        var masked = Mask(JsonSerializer.SerializeToNode(profile, ConfigurationJson.Options)!.AsObject());
+        using var services = CliContext.BuildServices(profile);
+        var masked = JsonSerializer.SerializeToNode(ConfigFileMapper.ToMaskedFile(profile), ConfigurationJson.WriteOptions)!.AsObject();
         var rows = Flatten(masked, string.Empty).Select(kv => (JsonNode?)new JsonObject { ["key"] = kv.Key, ["value"] = kv.Value }).ToArray();
-        return context.WriteResult(services, Single("config validate", masked, rows), profile.Output);
+        return context.WriteResult(services, Single("config validate", masked, rows), profile);
     }
 
     public static async Task<int> AuthTestAsync(CliContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
         var profile = context.LoadProfile();
-        await using var services = context.BuildServices(profile);
+        await using var services = CliContext.BuildServices(profile);
         try
         {
             await services.GetRequiredService<ITokenProvider>().GetTokenAsync(cancellationToken).ConfigureAwait(false);
@@ -67,30 +67,19 @@ public static class ServiceCommands
         }
         catch (Mg3Exception ex)
         {
-            return context.WriteError(ex, profile.Output);
+            return context.WriteError(ex);
         }
 
         var payload = new JsonObject
         {
             ["status"] = "ok",
             ["authMode"] = profile.Auth.Mode.ToString(),
-            ["baseUrl"] = profile.Orchestrator.BaseUrl,
+            ["url"] = profile.Orchestrator.BaseUrl,
             ["message"] = "Token ottenuto e odata/Folders raggiungibile.",
         };
-        return context.WriteResult(services, Single("auth test", payload, [payload]), profile.Output);
+        return context.WriteResult(services, Single("auth test", payload, [payload]), profile);
     }
 
-    private static Mg3Profile LenientProfile(CliContext context)
-    {
-        try
-        {
-            return context.LoadProfile(validate: false);
-        }
-        catch (ConfigurationException)
-        {
-            return new Mg3Profile { Output = context.Options.FallbackOutput(context.ParseResult) };
-        }
-    }
 
     private static BatchResult Single(string command, JsonNode payload, IReadOnlyList<JsonNode?> rows) =>
         new([new CommandResult { Id = command, Command = command, Payload = payload, Shape = PayloadShape.Entity, Rows = rows }], IsBatch: false, ExitCodes.Success);
@@ -114,21 +103,6 @@ public static class ServiceCommands
         }).ToArray()),
     };
 
-    private static JsonObject Mask(JsonObject profile)
-    {
-        if (profile["auth"] is JsonObject auth)
-        {
-            foreach (var key in new[] { "clientSecret", "token", "password" })
-            {
-                if (auth[key] is not null)
-                {
-                    auth[key] = "***";
-                }
-            }
-        }
-
-        return profile;
-    }
 
     private static IEnumerable<KeyValuePair<string, JsonNode?>> Flatten(JsonObject obj, string prefix)
     {

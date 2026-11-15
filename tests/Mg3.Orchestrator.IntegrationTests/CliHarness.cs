@@ -31,7 +31,9 @@ public sealed class CliHarness : IDisposable
 
     public string BaseUrl => Server.Url + Prefix + "/";
 
-    public Dictionary<string, string> Environment { get; } = new() { ["APP_SECRET"] = "segreto" };
+    public string ConfigPath => Path.Combine(_directory, "mg3orch.json");
+
+    public string WorkingDirectory => _directory;
 
     public void Dispose()
     {
@@ -40,25 +42,57 @@ public sealed class CliHarness : IDisposable
         Directory.Delete(_directory, recursive: true);
     }
 
-    /// <summary>Scrive mg3orch.json nella cartella di lavoro; <paramref name="patch"/> viene fuso nel profilo.</summary>
+    /// <summary>Scrive il file di configurazione; <paramref name="patch"/> viene fuso (null rimuove una chiave).</summary>
     public void Configure(string? patch = null)
     {
-        var profile = JsonNode.Parse($$"""
+        var config = JsonNode.Parse($$"""
             {
-              "orchestrator": { "baseUrl": "{{BaseUrl}}", "folder": { "path": "Shared" } },
-              "auth": { "mode": "ClientCredentials", "identityUrl": "{{Server.Url}}{{TokenPath}}", "clientId": "app", "clientSecret": "env:APP_SECRET", "scopes": "OR.Jobs.Read OR.Folders.Read" },
-              "http": { "maxRetries": 2, "retryBaseDelayMs": 0, "pageSize": 15, "timeoutSeconds": 10 },
-              "limits": { "globalTimeoutSeconds": 20 },
-              "output": { "timeZone": "UTC", "culture": "en-US" }
+              "url": "{{BaseUrl}}",
+              "folderPath": "Shared",
+              "clientId": "app",
+              "clientSecret": "segreto",
+              "scopes": "OR.Jobs.Read OR.Folders.Read",
+              "identityUrl": "{{Server.Url}}{{TokenPath}}",
+              "advanced": { "maxRetries": 2, "retryBaseDelayMs": 0, "pageSize": 15, "timeoutSeconds": 10, "globalTimeoutSeconds": 20, "timeZone": "UTC", "culture": "en-US" }
             }
             """)!.AsObject();
         if (patch is not null)
         {
-            Infrastructure.Configuration.JsonMerge.Merge(profile, JsonNode.Parse(patch)!.AsObject());
+            Merge(config, JsonNode.Parse(patch)!.AsObject());
         }
 
-        var root = new JsonObject { ["profiles"] = new JsonObject { ["default"] = profile } };
-        File.WriteAllText(Path.Combine(_directory, "mg3orch.json"), root.ToJsonString());
+        File.WriteAllText(ConfigPath, config.ToJsonString());
+    }
+
+    /// <summary>Usa un Personal Access Token al posto dell'applicazione esterna.</summary>
+    public void ConfigurePat(string token, string? patch = null)
+    {
+        Configure($$"""{ "clientId": null, "clientSecret": null, "scopes": null, "identityUrl": null, "token": "{{token}}" }""");
+        if (patch is not null)
+        {
+            var config = JsonNode.Parse(File.ReadAllText(ConfigPath))!.AsObject();
+            Merge(config, JsonNode.Parse(patch)!.AsObject());
+            File.WriteAllText(ConfigPath, config.ToJsonString());
+        }
+    }
+
+    private static void Merge(JsonObject target, JsonObject patch)
+    {
+        foreach (var (key, value) in patch.ToArray())
+        {
+            if (value is null)
+            {
+                target.Remove(key);
+            }
+            else if (value is JsonObject child && target[key] is JsonObject existing)
+            {
+                Merge(existing, child);
+            }
+            else
+            {
+                target[key] = value.DeepClone();
+            }
+        }
     }
 
     /// <summary>Endpoint OData con paginazione reale ($top/$skip/$count) sulle fixture.</summary>
@@ -97,12 +131,18 @@ public sealed class CliHarness : IDisposable
         Server.Given(Request.Create().WithPath(Prefix + "/" + path).UsingGet()).RespondWith(response);
     }
 
-    public async Task<CliRun> RunAsync(string[] args, string stdin = "", CancellationToken cancellationToken = default)
+    /// <summary>Esegue la CLI aggiungendo --config, salvo che gli argomenti lo indichino già o <paramref name="withConfig"/> sia false.</summary>
+    public async Task<CliRun> RunAsync(string[] args, string stdin = "", bool withConfig = true, CancellationToken cancellationToken = default)
     {
         using var output = new StringWriter();
         using var error = new StringWriter();
         using var input = new StringReader(stdin);
-        var environment = new CliEnvironment(output, error, input, Environment, _directory);
+        if (withConfig && !args.Contains("--config") && !args.Contains("-c"))
+        {
+            args = [.. args, "--config", ConfigPath];
+        }
+
+        var environment = new CliEnvironment(output, error, input, _directory);
         var code = await CliApplication.RunAsync(args, environment, cancellationToken);
         return new CliRun(code, output.ToString(), error.ToString());
     }

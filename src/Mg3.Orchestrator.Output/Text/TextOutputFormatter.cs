@@ -46,7 +46,7 @@ public sealed class TextOutputFormatter : IOutputFormatter
     public static string ErrorLine(ErrorInfo errorInfo)
     {
         ArgumentNullException.ThrowIfNull(errorInfo);
-        return $"ERRORE [{errorInfo.ExitCode.ToString(CultureInfo.InvariantCulture)}]: {errorInfo.Message}";
+        return $"ERRORE ({errorInfo.ExitCode.ToString(CultureInfo.InvariantCulture)} – {Abstractions.Errors.ExitCodes.Describe(errorInfo.ExitCode)}): {errorInfo.Message}";
     }
 
     private static void WriteSection(TextWriter writer, CommandResult result, bool isBatch, OutputSettings settings, ITextRenderer renderer, CellFormatter formatter)

@@ -2,6 +2,30 @@
 
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it-IT/1.1.0/) e il progetto adotta il [versionamento semantico](https://semver.org/lang/it/).
 
+## [2.0.0] - 2026-11-15
+
+### Modificato (incompatibile)
+
+- La configurazione sta in **un solo file JSON** indicato con `--config <percorso>`, ora obbligatorio. Il formato è piatto: `url`, cartella (`folderId`, `folderPath` o `folderKey`), un tipo di credenziali (`token`, `clientId`/`clientSecret`/`scopes`, `username`/`password`), `format`, `style` e la sezione facoltativa `advanced`.
+- La modalità di autenticazione si ricava dalle credenziali presenti; `identityUrl` si ricava dall'URL.
+- Gli errori sono su una sola riga, in italiano, con il significato dell'exit code (`ERRORE (2 – uso o configurazione non validi): …`) e, quando possibile, il comando corretto. Non sono più ripetuti su `stderr`. Il JSON d'errore ha il campo `meaning`.
+- Con la verbosità predefinita su `stderr` compaiono solo gli avvisi, non più i log dei retry.
+
+### Aggiunto
+
+- `mg3orch init`: crea il file di configurazione a partire dall'URL copiato dal browser, chiedendo solo i valori mancanti.
+
+### Rimosso
+
+- Variabili d'ambiente `MG3ORCH_CONFIG`, `MG3ORCH_PROFILE` e `MG3ORCH__…`; riferimenti `env:` e `file:` nei valori.
+- Profili e file predefinito `./mg3orch.json`.
+- Opzioni `--profile`, `--folder`, `--output`, `--text-style`, `--envelope`, `--verbosity`, `--no-pushdown`.
+- Blocco `config` nella richiesta batch.
+
+### Corretto
+
+- `config validate` non mostra più la proprietà interna `isEmpty`.
+
 ## [1.0.0] - 2026-11-14
 
 ### Aggiunto

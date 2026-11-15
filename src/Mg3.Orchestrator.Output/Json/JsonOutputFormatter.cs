@@ -59,6 +59,7 @@ public sealed class JsonOutputFormatter : IOutputFormatter
     {
         ["code"] = errorInfo.Code,
         ["exitCode"] = errorInfo.ExitCode,
+        ["meaning"] = Abstractions.Errors.ExitCodes.Describe(errorInfo.ExitCode),
         ["message"] = errorInfo.Message,
         ["commandId"] = errorInfo.CommandId,
     };

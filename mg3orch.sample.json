@@ -1,36 +1,21 @@
 {
-  "profiles": {
-    "default": {
-      "orchestrator": {
-        "baseUrl": "https://cloud.uipath.com/{org}/{tenant}/orchestrator_/",
-        "folder": { "path": "Shared" }
-      },
-      "auth": {
-        "mode": "ClientCredentials",
-        "identityUrl": "https://cloud.uipath.com/identity_/connect/token",
-        "clientId": "env:UIPATH_CLIENT_ID",
-        "clientSecret": "env:UIPATH_CLIENT_SECRET",
-        "scopes": "OR.Jobs.Read OR.Folders.Read OR.Queues.Read OR.Robots.Read OR.Machines.Read OR.Assets.Read OR.Execution.Read OR.Monitoring.Read"
-      },
-      "http": { "timeoutSeconds": 30, "maxRetries": 3, "retryBaseDelayMs": 500, "pageSize": 500 },
-      "limits": { "maxItems": 1000, "maxPages": 50, "globalTimeoutSeconds": 120, "maxJoinRows": 100000 },
-      "output": {
-        "format": "text",
-        "textStyle": "table",
-        "envelope": false,
-        "maxRows": 200,
-        "maxCellWidth": 80,
-        "timeZone": "Europe/Rome",
-        "culture": "it-IT"
-      }
-    },
-    "onprem": {
-      "orchestrator": { "baseUrl": "https://orchestrator.azienda.local/", "tenantName": "Default" },
-      "auth": { "mode": "Legacy", "username": "env:ORCH_USER", "password": "file:/run/secrets/orch_password" }
-    },
-    "pat": {
-      "orchestrator": { "baseUrl": "https://cloud.uipath.com/{org}/{tenant}/orchestrator_/", "folder": { "id": 123456 } },
-      "auth": { "mode": "Pat", "token": "env:UIPATH_PAT" }
-    }
+  // Obbligatori: url e un solo tipo di credenziali.
+  "url": "https://cloud.uipath.com/<organizzazione>/<tenant>/orchestrator_/",
+  "folderId": 123456,
+
+  // Personal Access Token...
+  "token": "<PAT>",
+
+  // ...oppure applicazione esterna (togli "token"):
+  // "clientId": "<app id>",
+  // "clientSecret": "<app secret>",
+  // "scopes": "OR.Jobs.Read OR.Folders.Read OR.Queues.Read OR.Robots.Read OR.Machines.Read OR.Assets.Read OR.Execution.Read OR.Monitoring.Read",
+
+  // Facoltativi.
+  "format": "text",
+  "style": "table",
+  "advanced": {
+    "timeZone": "Europe/Rome",
+    "culture": "it-IT"
   }
 }

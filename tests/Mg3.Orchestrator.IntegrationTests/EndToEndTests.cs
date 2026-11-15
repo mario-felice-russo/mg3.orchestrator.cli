@@ -16,8 +16,9 @@ public sealed class EndToEndTests : IDisposable
     [Fact]
     public async Task RawJsonIsIdenticalToOrchestratorPayload()
     {
+_cli.Configure("{ \"format\": \"json\" }");
         _cli.ServeRaw("odata/Jobs", Fixtures.Text("jobs.json"));
-        var run = await _cli.RunAsync(["jobs", "list", "-o", "json"]);
+        var run = await _cli.RunAsync(["jobs", "list"]);
         run.ExitCode.ShouldBe(0);
         run.Out.ShouldBe(Fixtures.Text("jobs.json") + Environment.NewLine);
     }
@@ -25,8 +26,9 @@ public sealed class EndToEndTests : IDisposable
     [Fact]
     public async Task FollowsPaginationAndSendsHeaders()
     {
+        _cli.Configure("{ \"format\": \"json\", \"folderPath\": \"Finance/Fatture\" }");
         _cli.ServeCollection("odata/Jobs", "jobs.json");
-        var run = await _cli.RunAsync(["jobs", "list", "-o", "json", "--folder", "Finance/Fatture"]);
+        var run = await _cli.RunAsync(["jobs", "list"]);
         run.Json["value"]!.AsArray().Count.ShouldBe(40);
         var requests = _cli.OrchestratorRequests().ToList();
         requests.Count.ShouldBe(3);
@@ -38,8 +40,9 @@ public sealed class EndToEndTests : IDisposable
     [Fact]
     public async Task PushesQueryToODataAndReportsIt()
     {
+        _cli.Configure("{ \"format\": \"json\", \"advanced\": { \"envelope\": true } }");
         _cli.ServeCollection("odata/Jobs", "jobs.json");
-        var run = await _cli.RunAsync(["jobs", "list", "-q", "where State == 'Faulted' | orderby Id desc | take 3", "-o", "json", "--envelope"]);
+        var run = await _cli.RunAsync(["jobs", "list", "-q", "where State == 'Faulted' | orderby Id desc | take 3"]);
         run.ExitCode.ShouldBe(0);
         var envelope = run.Json;
         envelope["pushdown"]!.GetValue<string>().ShouldBe("$filter=State eq 'Faulted'; $orderby=Id desc; $top=3");
@@ -57,7 +60,8 @@ public sealed class EndToEndTests : IDisposable
             .RespondWith(Response.Create().WithStatusCode(429).WithHeader("Retry-After", "0"));
         _cli.Server.Given(Request.Create().WithPath(CliHarness.Prefix + "/odata/Jobs").UsingGet()).InScenario("rate").WhenStateIs("ok")
             .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json").WithBody("{\"value\":[{\"Id\":1}]}"));
-        var run = await _cli.RunAsync(["jobs", "list", "-o", "json"]);
+        _cli.Configure("{ \"format\": \"json\" }");
+        var run = await _cli.RunAsync(["jobs", "list"]);
         run.ExitCode.ShouldBe(0);
         _cli.OrchestratorRequests().Count().ShouldBe(2);
     }
@@ -73,8 +77,7 @@ public sealed class EndToEndTests : IDisposable
     [Fact]
     public async Task PatAuthenticationSendsTokenWithoutIdentityCall()
     {
-        _cli.Environment["MY_PAT"] = "pat-123";
-        _cli.Configure("{ \"auth\": { \"mode\": \"Pat\", \"token\": \"env:MY_PAT\" } }");
+        _cli.ConfigurePat("pat-123");
         _cli.ServeCollection("odata/Releases", "releases.json");
         var run = await _cli.RunAsync(["releases", "list"]);
         run.ExitCode.ShouldBe(0);
@@ -85,11 +88,11 @@ public sealed class EndToEndTests : IDisposable
     [Fact]
     public async Task LegacyAuthenticationUsesAccountEndpoint()
     {
-        _cli.Configure("{ \"orchestrator\": { \"tenantName\": \"T1\" }, \"auth\": { \"mode\": \"Legacy\", \"username\": \"admin\", \"password\": \"pw\" } }");
+        _cli.Configure("{ \"clientId\": null, \"clientSecret\": null, \"scopes\": null, \"identityUrl\": null, \"tenantName\": \"T1\", \"username\": \"admin\", \"password\": \"pw\", \"format\": \"json\" }");
         _cli.Server.Given(Request.Create().WithPath(CliHarness.Prefix + "/api/Account/Authenticate").UsingPost())
             .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json").WithBody("{\"result\":\"legacy\"}"));
         _cli.ServeRaw("api/Stats/GetJobsStats", Fixtures.Text("jobstats.json"));
-        var run = await _cli.RunAsync(["stats", "jobs", "-q", "where count > 0 | select title", "-o", "json"]);
+        var run = await _cli.RunAsync(["stats", "jobs", "-q", "where count > 0 | select title"]);
         run.ExitCode.ShouldBe(0);
         run.Out.TrimEnd().ShouldBe("[{\"title\":\"Successful\"},{\"title\":\"Faulted\"},{\"title\":\"Running\"}]");
         var get = _cli.OrchestratorRequests().Single(r => CliHarness.Method(r) == "GET");
@@ -100,11 +103,11 @@ public sealed class EndToEndTests : IDisposable
     [Fact]
     public async Task BatchWithDependenciesAndTextOutput()
     {
+        _cli.Configure("{ \"style\": \"markdown\" }");
         _cli.ServeCollection("odata/Jobs", "jobs.json");
         _cli.ServeCollection("odata/Releases", "releases.json");
         const string request = """
             {
-              "config": { "output": { "format": "text", "textStyle": "markdown" } },
               "commands": [
                 { "id": "rel", "command": "releases list" },
                 { "id": "faults", "command": "jobs list", "args": { "top": 40 }, "query": "where Info contains 'importo' | select Id, ReleaseName" },
@@ -127,8 +130,9 @@ public sealed class EndToEndTests : IDisposable
         await File.WriteAllTextAsync(path, """{ "commands": [ { "id": "s", "command": "stats jobs" } ] }""");
         try
         {
+            _cli.Configure("{ \"format\": \"json\" }");
             _cli.ServeRaw("api/Stats/GetJobsStats", Fixtures.Text("jobstats.json"));
-            var run = await _cli.RunAsync(["run", "-r", path, "-o", "json"]);
+            var run = await _cli.RunAsync(["run", "-r", path]);
             run.Json["s"]!.AsArray().Count.ShouldBe(3);
             (await _cli.RunAsync(["run", "-r", path + ".missing"])).ExitCode.ShouldBe(2);
         }
@@ -151,7 +155,7 @@ public sealed class EndToEndTests : IDisposable
     [InlineData("{ \"commands\": [], \"options\": { \"parallelism\": \"x\" } }")]
     [InlineData("{ \"commands\": [], \"options\": { \"stopOnError\": 1 } }")]
     [InlineData("{ \"commands\": [], \"options\": { \"other\": 1 } }")]
-    [InlineData("{ \"commands\": [], \"config\": 1 }")]
+    [InlineData("{ \"commands\": [], \"config\": {} }")]
     [InlineData("{ \"commands\": [], \"pippo\": 1 }")]
     [InlineData("{ \"commands\": [ { \"id\": \"a\", \"command\": \"jobs list\", \"args\": { \"pippo\": \"1\" } } ] }")]
     public async Task InvalidBatchRequestsExitWith2(string request)
@@ -162,19 +166,22 @@ public sealed class EndToEndTests : IDisposable
     [Fact]
     public async Task ExplainMakesNoCalls()
     {
-        var run = await _cli.RunAsync(["jobs", "list", "-q", "where Id > 5 | groupby State", "--explain", "-o", "json"]);
+        _cli.Configure("{ \"format\": \"json\" }");
+        var run = await _cli.RunAsync(["jobs", "list", "-q", "where Id > 5 | groupby State", "--explain"]);
         run.ExitCode.ShouldBe(0);
         run.Json["server"]!["$filter"]!.GetValue<string>().ShouldBe("Id gt 5");
         _cli.Server.LogEntries.ShouldBeEmpty();
-        var text = await _cli.RunAsync(["jobs", "list", "-q", "where Id > 5", "--explain", "--no-pushdown"]);
-        text.Out.ShouldContain("client  where (Id > 5)");
+        _cli.Configure();
+        var text = await _cli.RunAsync(["jobs", "list", "-q", "where lower(State) == 'x'", "--explain"]);
+        text.Out.ShouldContain("client  where (lower(State) == 'x')");
     }
 
     [Fact]
     public async Task ODataGetReadsArbitraryPaths()
     {
         _cli.ServeRaw("odata/QueueDefinitions", "{\"value\":[{\"Id\":1,\"Name\":\"Coda\"}]}");
-        var run = await _cli.RunAsync(["odata", "get", "odata/QueueDefinitions", "--top", "5", "-o", "json"]);
+        _cli.Configure("{ \"format\": \"json\" }");
+        var run = await _cli.RunAsync(["odata", "get", "odata/QueueDefinitions", "--top", "5"]);
         run.ExitCode.ShouldBe(0);
         run.Json["value"]![0]!["Name"]!.GetValue<string>().ShouldBe("Coda");
         CliHarness.Query(_cli.OrchestratorRequests().Single(), "$top").ShouldBe("5");
@@ -186,10 +193,12 @@ public sealed class EndToEndTests : IDisposable
     {
         _cli.ServeCollection("odata/Jobs", "jobs.json");
         _cli.ServeRaw("odata/Processes/UiPath.Server.Configuration.OData.GetProcessVersions(processId='Pkg')", "{\"value\":[{\"Version\":\"1.0.0\"}]}");
-        var since = await _cli.RunAsync(["jobs", "count", "--since", "2d", "--filter", "Source eq 'Manual'", "-o", "json"]);
+        _cli.Configure("{ \"format\": \"json\" }");
+        var since = await _cli.RunAsync(["jobs", "count", "--since", "2d", "--filter", "Source eq 'Manual'"]);
         since.ExitCode.ShouldBe(0);
         CliHarness.Query(_cli.OrchestratorRequests().Last(), "$filter").ShouldStartWith("(Source eq 'Manual') and (CreationTime ge ");
-        var versions = await _cli.RunAsync(["packages", "versions", "Pkg", "--text-style", "list"]);
+        _cli.Configure("{ \"style\": \"list\" }");
+        var versions = await _cli.RunAsync(["packages", "versions", "Pkg"]);
         versions.ExitCode.ShouldBe(0);
         versions.Out.ShouldContain("Version: 1.0.0");
         var alias = await _cli.RunAsync(["processes", "list", "--select", "Id", "--orderby", "Id", "--skip", "1", "--expand", "Robot"]);
@@ -199,7 +208,8 @@ public sealed class EndToEndTests : IDisposable
     [Fact]
     public async Task CatalogSchemaAndConfigCommands()
     {
-        var catalog = await _cli.RunAsync(["catalog", "-o", "json"]);
+        _cli.Configure("{ \"format\": \"json\" }");
+        var catalog = await _cli.RunAsync(["catalog"]);
         catalog.ExitCode.ShouldBe(0);
         catalog.Json.AsArray().Count.ShouldBe(33);
 
@@ -210,19 +220,23 @@ public sealed class EndToEndTests : IDisposable
         tools.ShouldContain(t => t!["name"]!.GetValue<string>() == "run");
         schema.Json["exitCodes"]!["130"]!.GetValue<string>().ShouldNotBeEmpty();
 
-        var config = await _cli.RunAsync(["config", "validate", "-o", "json"]);
+        var config = await _cli.RunAsync(["config", "validate"]);
         config.ExitCode.ShouldBe(0);
-        config.Json["auth"]!["clientSecret"]!.GetValue<string>().ShouldBe("***");
+        config.Json["clientSecret"]!.GetValue<string>().ShouldBe("***");
+        config.Json["identityUrl"]!.GetValue<string>().ShouldEndWith("/identity_/connect/token");
+        config.Json["advanced"]!["maxRows"]!.GetValue<int>().ShouldBe(200);
         config.Out.ShouldNotContain("segreto");
+        config.Out.ShouldNotContain("isEmpty");
+        _cli.Configure();
         var configText = await _cli.RunAsync(["config", "validate"]);
-        configText.Out.ShouldContain("auth.clientSecret");
+        configText.Out.ShouldContain("clientSecret");
+        configText.Out.ShouldContain("advanced.timeZone");
     }
 
     [Fact]
     public async Task CatalogWorksWithoutConfiguration()
     {
-        _cli.Environment["MG3ORCH_CONFIG"] = "/percorso/inesistente.json";
-        var run = await _cli.RunAsync(["catalog"]);
+        var run = await _cli.RunAsync(["catalog"], withConfig: false);
         run.ExitCode.ShouldBe(0);
         run.Out.ShouldStartWith("## catalog — 33 righe");
     }
@@ -230,8 +244,9 @@ public sealed class EndToEndTests : IDisposable
     [Fact]
     public async Task AuthTestChecksTokenAndFolders()
     {
+        _cli.Configure("{ \"format\": \"json\" }");
         _cli.ServeRaw("odata/Folders", "{\"value\":[]}");
-        var run = await _cli.RunAsync(["auth", "test", "-o", "json"]);
+        var run = await _cli.RunAsync(["auth", "test"]);
         run.ExitCode.ShouldBe(0);
         run.Json["status"]!.GetValue<string>().ShouldBe("ok");
         _cli.Server.Reset();
@@ -242,30 +257,33 @@ public sealed class EndToEndTests : IDisposable
     [Fact]
     public async Task WarningsGoToStderrOnly()
     {
-        _cli.Configure("{ \"orchestrator\": { \"folder\": { \"path\": null } } }");
+        _cli.Configure("{ \"folderPath\": null, \"format\": \"json\" }");
         _cli.ServeCollection("odata/Jobs", "jobs.json");
-        var run = await _cli.RunAsync(["jobs", "list", "-q", "where Sconosciuto == 1", "-o", "json"]);
+        var run = await _cli.RunAsync(["jobs", "list", "-q", "where Sconosciuto == 1"]);
         run.ExitCode.ShouldBe(0);
         run.Error.ShouldContain("AVVISO [cmd]: Nessuna cartella");
         run.Error.ShouldContain("Sconosciuto");
         JsonNode.Parse(run.Out)!["value"]!.AsArray().ShouldBeEmpty();
-        var quiet = await _cli.RunAsync(["jobs", "list", "-q", "where Sconosciuto == 1", "--verbosity", "quiet"]);
+        _cli.Configure("{ \"folderPath\": null, \"advanced\": { \"verbosity\": \"quiet\" } }");
+        var quiet = await _cli.RunAsync(["jobs", "list", "-q", "where Sconosciuto == 1"]);
         quiet.Error.ShouldBeEmpty();
     }
 
     [Fact]
     public async Task DiagnosticVerbosityLogsUrlsButNotTokens()
     {
+        _cli.Configure("{ \"advanced\": { \"verbosity\": \"diagnostic\" } }");
         _cli.ServeCollection("odata/Jobs", "jobs.json");
-        var run = await _cli.RunAsync(["jobs", "count", "--verbosity", "diagnostic"]);
+        var run = await _cli.RunAsync(["jobs", "count"]);
         run.ExitCode.ShouldBe(0);
         run.Out.ShouldContain("count");
+        run.Out.ShouldNotContain("HTTP GET");
     }
 
     [Fact]
     public async Task HelpAndVersionExitZero()
     {
-        (await _cli.RunAsync(["--help"])).ExitCode.ShouldBe(0);
-        (await _cli.RunAsync(["--version"])).ExitCode.ShouldBe(0);
+        (await _cli.RunAsync(["--help"], withConfig: false)).ExitCode.ShouldBe(0);
+        (await _cli.RunAsync(["--version"], withConfig: false)).ExitCode.ShouldBe(0);
     }
 }

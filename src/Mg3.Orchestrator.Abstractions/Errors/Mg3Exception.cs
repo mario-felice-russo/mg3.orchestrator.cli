@@ -12,6 +12,22 @@ public static class ExitCodes
     public const int PartialSuccess = 7;
     public const int Unavailable = 8;
     public const int Cancelled = 130;
+
+    /// <summary>Significato leggibile di un exit code.</summary>
+    public static string Describe(int exitCode) => exitCode switch
+    {
+        Success => "successo",
+        Generic => "errore non classificato",
+        InvalidUsage => "uso o configurazione non validi",
+        Authentication => "autenticazione fallita",
+        AccessDenied => "accesso negato o risorsa non trovata",
+        Query => "errore nella query",
+        Timeout => "timeout globale superato",
+        PartialSuccess => "batch con successo parziale",
+        Unavailable => "Orchestrator non raggiungibile",
+        Cancelled => "annullato dall'utente",
+        _ => "codice sconosciuto",
+    };
 }
 
 /// <summary>Errore applicativo con exit code associato.</summary>
