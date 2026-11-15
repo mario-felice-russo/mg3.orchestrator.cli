@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Menu per verificare i processi in errore su UiPath Orchestrator con mg3orch.
 
@@ -12,7 +12,8 @@
     dell'utente, e la elimina all'uscita.
 
 .PARAMETER Config
-    File di configurazione di mg3orch. Default: .\mg3orch.json
+    File di configurazione di mg3orch. Se omesso, cerca mg3orch.json nella cartella corrente
+    e poi in quella dello script.
 
 .PARAMETER Exe
     Percorso di mg3orch. Se omesso, lo cerca accanto allo script, in artifacts\win-x64 e nel PATH.
@@ -28,7 +29,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$Config = '.\mg3orch.json',
+    [string]$Config,
     [string]$Exe,
     [string]$Since = '24h'
 )
@@ -60,11 +61,21 @@ function Find-Mg3Exe {
     throw "mg3orch non trovato. Indicalo con -Exe <percorso>, oppure compilalo con: dotnet publish src/Mg3.Orchestrator.Cli -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o artifacts/win-x64"
 }
 
+function Find-Config {
+    param([string]$Explicit)
+    if ($Explicit) {
+        if (Test-Path -LiteralPath $Explicit -PathType Leaf) { return (Resolve-Path -LiteralPath $Explicit).Path }
+        throw "Il file di configurazione '$Explicit' non esiste. Crealo con: mg3orch init --config $Explicit"
+    }
+    $candidates = @((Join-Path (Get-Location) 'mg3orch.json'), (Join-Path $PSScriptRoot 'mg3orch.json'))
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) { return (Resolve-Path -LiteralPath $candidate).Path }
+    }
+    throw ("mg3orch.json non trovato in: {0}. Indicalo con -Config <percorso>, oppure crealo con: mg3orch init --config mg3orch.json" -f ($candidates -join ', '))
+}
+
 function New-JsonConfigCopy {
     param([string]$Path)
-    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-        throw "Il file di configurazione '$Path' non esiste. Crealo con: mg3orch init --config $Path"
-    }
     # Le righe di commento // sono ammesse da mg3orch ma non da ConvertFrom-Json di Windows PowerShell 5.1.
     $text = (Get-Content -LiteralPath $Path -Raw) -replace '(?m)^\s*//.*$', ''
     $config = $text | ConvertFrom-Json
@@ -116,7 +127,7 @@ function Invoke-Mg3 {
 
 function Write-Mg3Error {
     param($ErrorInfo)
-    Write-Host ("ERRORE ({0} – {1}): {2}" -f $ErrorInfo.exitCode, $ErrorInfo.meaning, $ErrorInfo.message) -ForegroundColor Red
+    Write-Host ("ERRORE ({0} - {1}): {2}" -f $ErrorInfo.exitCode, $ErrorInfo.meaning, $ErrorInfo.message) -ForegroundColor Red
 }
 
 function Format-LocalTime {
@@ -246,7 +257,8 @@ function Set-Period {
 
 function Show-Menu {
     Write-Host ''
-    Write-Host "=== mg3orch — processi in errore (ultime $script:Since) ===" -ForegroundColor Cyan
+    Write-Host "=== mg3orch - processi in errore (ultime $script:Since) ===" -ForegroundColor Cyan
+    Write-Host "    Configurazione: $script:ConfigPath" -ForegroundColor DarkGray
     Write-Host '  1) Job in errore: messaggio e VM'
     Write-Host '  2) Riepilogo per processo e VM'
     Write-Host '  3) Riepilogo per VM'
@@ -264,7 +276,8 @@ try {
         throw "Periodo non valido '$Since': usa un numero seguito da m, h, d o w (es. 24h)."
     }
     $script:Mg3 = Find-Mg3Exe $Exe
-    $script:JsonConfig = New-JsonConfigCopy $Config
+    $script:ConfigPath = Find-Config $Config
+    $script:JsonConfig = New-JsonConfigCopy $script:ConfigPath
 }
 catch {
     Write-Host "ERRORE: $($_.Exception.Message)" -ForegroundColor Red

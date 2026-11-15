@@ -387,6 +387,7 @@ Il profilo è fisso per il container. In alternativa al file si può costruire d
 [`scripts/mg3orch-menu.ps1`](scripts/mg3orch-menu.ps1) apre un menu con le verifiche più frequenti sui processi falliti. Mostra solo i job in errore, con il messaggio d'errore e la VM su cui sono stati eseguiti.
 
 ```powershell
+.\scripts\mg3orch-menu.ps1                                   # usa mg3orch.json della cartella corrente o dello script
 .\scripts\mg3orch-menu.ps1 -Config .\mg3orch.json            # ultime 24 ore
 .\scripts\mg3orch-menu.ps1 -Config .\mg3orch.json -Since 7d   # ultimi 7 giorni
 ```
@@ -403,7 +404,8 @@ Il profilo è fisso per il container. In alternativa al file si può costruire d
 
 Note:
 - Funziona con Windows PowerShell 5.1 e con PowerShell 7.
-- `mg3orch` viene cercato in `-Exe`, accanto allo script, in `artifacts\win-x64` e nel `PATH`.
+- `mg3orch` viene cercato in `-Exe`, accanto allo script, in `artifacts\win-x64` e nel `PATH`; il file di configurazione in `-Config`, poi come `mg3orch.json` nella cartella corrente e in quella dello script.
+- Il file è salvato in UTF-8 con BOM, necessario perché Windows PowerShell 5.1 legga correttamente le lettere accentate. Se lo modifichi, mantieni questa codifica.
 - Per leggere l'output, lo script crea una copia temporanea della configurazione con `"format": "json"` nella cartella temporanea dell'utente e la elimina all'uscita.
 - Un job è "in errore nelle ultime 24 ore" se è terminato (`EndTime`) nel periodo con stato `Faulted`. I filtri vengono eseguiti da Orchestrator, non in memoria.
 
