@@ -94,7 +94,9 @@ jobs:
         run: |
           ./artifacts/linux-x64/mg3orch --version
           ./artifacts/linux-x64/mg3orch schema > /dev/null
-          ./artifacts/linux-x64/mg3orch catalog --output json > /dev/null
+          ./artifacts/linux-x64/mg3orch catalog > /dev/null
+          ./artifacts/linux-x64/mg3orch init --config smoke.json --url "https://cloud.uipath.com/org/tenant/orchestrator_/?fid=1" --token smoke
+          ./artifacts/linux-x64/mg3orch config validate --config smoke.json > /dev/null
 
       - uses: actions/upload-artifact@v4
         with:
